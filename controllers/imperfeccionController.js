@@ -1,10 +1,14 @@
-const { Imperfeccion } = require('../models/imperfeccionModel');
+const { Imperfeccion } = require('../models/imperfeccionModel'); 
 
 exports.obtenerImperfecciones = async (req, res) => {
     try {
         const imperfecciones = await Imperfeccion.findAll();
+        if (!imperfecciones) {
+            return res.status(404).json({ message: 'No hay imperfecciones registradas' });
+        }
         return res.json(imperfecciones);
     } catch (error) {
+        console.log(error)
         return res.status(500).json({ error: error.message });
     }
 }

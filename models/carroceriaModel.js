@@ -1,6 +1,6 @@
-const sequelize = require('../config/SQL');
-module.exports = (sequelize, DataTypes) => {
-    const Carroceria = sequelize.define('Carroceria', {
+const { DataTypes } = require('sequelize');
+const { databaseMySQL } = require('../config/SQL');
+    const Carroceria = databaseMySQL.define('Carroceria', {
         id: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
@@ -21,5 +21,4 @@ module.exports = (sequelize, DataTypes) => {
         timestamps: true
     });
 
-    return Carroceria;
-};
+module.exports = { Carroceria };

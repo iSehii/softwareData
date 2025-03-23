@@ -1,6 +1,6 @@
-const sequelize = require('../config/SQL');
-module.exports = (sequelize, DataTypes) => {
-    const Usuario = sequelize.define('Usuario', {
+const { DataTypes } = require('sequelize');
+const { databaseMySQL } = require('../config/SQL');
+    const Usuario = databaseMySQL.define('Usuario', {
         id: {
             type: DataTypes.INTEGER,
             autoIncrement: true,
@@ -40,5 +40,4 @@ module.exports = (sequelize, DataTypes) => {
         timestamps: true
     });
 
-    return Usuario;
-};
+    module.exports = { Usuario };

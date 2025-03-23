@@ -2,11 +2,12 @@ const express = require('express');
 const morgan = require('morgan');
 const cors = require('cors');
 const conectarNoSQL = require('./config/NoSQL');
-const conectarSQL = require('./config/SQL');
+const { conectarMySQL } = require('./config/SQL');
 const bodyParser = require('body-parser');
 const routes = require('./routes');
 const app = express();
-const port = process.env.PORT || 3005;
+const port = process.env.PORT || 3006;
+require('./models/relaciones');
 require('dotenv').config();
 
 const expressListEndpoints = require('express-list-endpoints');
@@ -18,7 +19,7 @@ console.log(expressListEndpoints(app));
 app.use(bodyParser.json());
 app.use(express.json());
 conectarNoSQL();
-conectarSQL();
+conectarMySQL();
 
 app.listen(port, () => {
     console.log(`Ejecutando en: http://localhost:${port}`);

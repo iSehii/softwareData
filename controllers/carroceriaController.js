@@ -1,4 +1,4 @@
-const { Carroceria } = require('../config/SQL')();
+const { Carroceria } = require('../models/carroceriaModel');
 
 exports.obtenerCarrocerias = async (req, res) => {
     try {
