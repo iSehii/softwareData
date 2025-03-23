@@ -22,10 +22,13 @@ const Reporte = databaseMySQL.define('Reporte', {
             key: 'id'
         }
     },
-    created_by: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-    }
+        id_usuario: {
+            type: DataTypes.INTEGER,
+            references: {
+                model: 'Usuarios',
+                key: 'id'
+            }
+        }
 }, {
     tableName: 'reportes',
     timestamps: true

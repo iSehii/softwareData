@@ -28,11 +28,11 @@ exports.obtenerImperfeccion = async (req, res) => {
 
 exports.crearImperfeccion = async (req, res) => {
     try {
-        const { coordenadas, severidad, created_by } = req.body;
+        const { coordenadas, severidad, id_usuario } = req.body;
         const nuevaImperfeccion = await Imperfeccion.create({
             coordenadas,
             severidad,
-            created_by
+            id_usuario
         });
         return res.status(201).json(nuevaImperfeccion);
     } catch (error) {
@@ -43,7 +43,7 @@ exports.crearImperfeccion = async (req, res) => {
 exports.actualizarImperfeccion = async (req, res) => {
     try {
         const { id } = req.params;
-        const { coordenadas, severidad, created_by } = req.body;
+        const { coordenadas, severidad, id_usuario } = req.body;
         const imperfeccion = await Imperfeccion.findByPk(id);
         if (!imperfeccion) {
             return res.status(404).json({ message: 'Imperfección no encontrada' });
@@ -51,7 +51,7 @@ exports.actualizarImperfeccion = async (req, res) => {
         await imperfeccion.update({
             coordenadas,
             severidad,
-            created_by
+            id_usuario
         });
         return res.json(imperfeccion);
     } catch (error) {

@@ -30,10 +30,6 @@ const { databaseMySQL } = require('../config/SQL');
                 model: 'Roles',
                 key: 'id'
             }
-        },
-        created_by: {
-            type: DataTypes.INTEGER,
-            allowNull: true
         }
     }, {
         tableName: 'usuarios',

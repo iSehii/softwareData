@@ -9,10 +9,13 @@ const Imperfeccion = databaseMySQL.define('Imperfeccion', {
     },
     coordenadas: DataTypes.STRING(45),
     severidad: DataTypes.INTEGER,
-    created_by: {
-        type: DataTypes.INTEGER,
-        allowNull: true
-    }
+        id_usuario: {
+            type: DataTypes.INTEGER,
+            references: {
+                model: 'Usuarios',
+                key: 'id'
+            }
+        }
 }, {
     tableName: 'imperfecciones',
     timestamps: true

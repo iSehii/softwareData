@@ -27,14 +27,14 @@ exports.obtenerUsuario = async (req, res) => {
 
 exports.crearUsuario = async (req, res) => {
     try {
-        const { username, nombre, correo, clave, id_rol, created_by } = req.body;
+        const { username, nombre, correo, clave, id_rol, id_usuario } = req.body;
         const nuevoUsuario = await Usuario.create({
             username,
             nombre,
             correo,
             clave,
             id_rol,
-            created_by
+            id_usuario
         });
         return res.status(201).json(nuevoUsuario);
     } catch (error) {
@@ -45,7 +45,7 @@ exports.crearUsuario = async (req, res) => {
 exports.actualizarUsuario = async (req, res) => {
     try {
         const { id } = req.params;
-        const { username, nombre, correo, clave, id_rol, created_by } = req.body;
+        const { username, nombre, correo, clave, id_rol, id_usuario } = req.body;
 
         const usuario = await Usuario.findByPk(id);
         if (!usuario) {
@@ -58,7 +58,7 @@ exports.actualizarUsuario = async (req, res) => {
             correo,
             clave,
             id_rol,
-            created_by
+            id_usuario
         });
 
         return res.json(usuario);

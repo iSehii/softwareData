@@ -26,7 +26,7 @@ exports.crearCarroceria = async (req, res) => {
     try {
         const {
             no_parte, color, panel, descripcion,
-            lote, estado, carroceriascol, created_by
+            lote, estado, carroceriascol, id_usuario
         } = req.body;
         const nuevaCarroceria = await Carroceria.create({
             no_parte,
@@ -36,7 +36,7 @@ exports.crearCarroceria = async (req, res) => {
             lote,
             estado,
             carroceriascol,
-            created_by
+            id_usuario
         });
         return res.status(201).json(nuevaCarroceria);
     } catch (error) {
@@ -49,7 +49,7 @@ exports.actualizarCarroceria = async (req, res) => {
         const { id } = req.params;
         const {
             no_parte, color, panel, descripcion,
-            lote, estado, carroceriascol, created_by
+            lote, estado, carroceriascol, id_usuario
         } = req.body;
         const carroceria = await Carroceria.findByPk(id);
         if (!carroceria) {
@@ -63,7 +63,7 @@ exports.actualizarCarroceria = async (req, res) => {
             lote,
             estado,
             carroceriascol,
-            created_by
+            id_usuario
         });
         return res.json(carroceria);
     } catch (error) {

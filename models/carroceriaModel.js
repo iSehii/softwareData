@@ -12,9 +12,12 @@ const { databaseMySQL } = require('../config/SQL');
         descripcion: DataTypes.STRING(45),
         lote: DataTypes.STRING(45),
         estado: DataTypes.INTEGER,
-        created_by: {
+        id_usuario: {
             type: DataTypes.INTEGER,
-            allowNull: true
+            references: {
+                model: 'Usuarios',
+                key: 'id'
+            }
         }
     }, {
         tableName: 'carrocerias',

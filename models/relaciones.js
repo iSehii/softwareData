@@ -1,6 +1,6 @@
 const {Rol} = require('../models/rolModel');
-const {Imperfeccion} = require('../models/imperfeccionModel');
 const {Usuario} = require('../models/usuarioModel');
+const {Imperfeccion} = require('../models/imperfeccionModel');
 const {Carroceria} = require('../models/carroceriaModel');
 const {ImperfeccionCarroceria} = require('../models/imperfeccionCarroceriaModel');
 const {Reporte} = require('../models/reporteModel');
@@ -37,12 +37,24 @@ Imperfeccion.belongsToMany(Carroceria, {
   indexes: [{ name: 'idx_imperfeccion_carroceria' }]
 });
 
+Carroceria.belongsTo(Usuario, {
+  foreignKey: { name: 'id_usuario', field: 'id_usuario' }
+});
+
+Imperfeccion.belongsTo(Usuario, {
+  foreignKey: { name: 'id_usuario', field: 'id_usuario' }
+});
+
+Reporte.belongsTo(Usuario, {
+  foreignKey: { name: 'id_usuario', field: 'id_usuario' }
+});
+
 module.exports = {
-    Rol,
-    Imperfeccion,
-    Usuario,
-    Carroceria,
-    ImperfeccionCarroceria,
-    Reporte
+  Rol,
+  Usuario,
+  Imperfeccion,
+  Carroceria,
+  ImperfeccionCarroceria,
+  Reporte,
   };
   

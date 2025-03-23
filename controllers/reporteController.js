@@ -27,15 +27,15 @@ exports.crearReporte = async (req, res) => {
     try {
         const {
             prioridad, descripcion, reportescol,
-            imperfecciones_id, carrocerias_id, created_by
+            id_imperfecciones, id_carrocerias, id_usuario
         } = req.body;
         const nuevoReporte = await Reporte.create({
             prioridad,
             descripcion,
             reportescol,
-            imperfecciones_id,
-            carrocerias_id,
-            created_by
+            id_imperfecciones,
+            id_carrocerias,
+            id_usuario
         });
         return res.status(201).json(nuevoReporte);
     } catch (error) {
@@ -48,7 +48,7 @@ exports.actualizarReporte = async (req, res) => {
         const { id } = req.params;
         const {
             prioridad, descripcion, reportescol,
-            imperfecciones_id, carrocerias_id, created_by
+            id_imperfecciones, id_carrocerias, id_usuario
         } = req.body;
         const reporte = await Reporte.findByPk(id);
         if (!reporte) {
@@ -58,9 +58,9 @@ exports.actualizarReporte = async (req, res) => {
             prioridad,
             descripcion,
             reportescol,
-            imperfecciones_id,
-            carrocerias_id,
-            created_by
+            id_imperfecciones,
+            id_carrocerias,
+            id_usuario
         });
         return res.json(reporte);
     } catch (error) {
