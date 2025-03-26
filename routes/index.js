@@ -8,10 +8,12 @@ const usuarioRoutes = require('./usuarioRoutes');
 const carroceriaRoutes = require('./carroceriaRoutes');
 const imperfeccionRoutes = require('./imperfeccionRoutes');
 const reporteRoutes = require('./reporteRoutes');
+const imagenRoutes = require('./imagenRoutes');
 
 // router.use('/', Index);
 router.use('/roles', rolRoutes);
 router.use('/usuarios', usuarioRoutes);
+router.use('/imagenes', imagenRoutes);
 router.use('/carrocerias', carroceriaRoutes);
 router.use('/imperfecciones', imperfeccionRoutes);
 router.use('/reportes', reporteRoutes);
