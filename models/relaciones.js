@@ -1,4 +1,6 @@
 const {Rol} = require('../models/rolModel');
+const { Prioridad } = require('../models/prioridadModel');
+const { Severidad } = require('../models/severidadModel');
 const {Usuario} = require('../models/usuarioModel');
 const {Imperfeccion} = require('../models/imperfeccionModel');
 const {Carroceria} = require('../models/carroceriaModel');
@@ -45,8 +47,16 @@ Imperfeccion.belongsTo(Usuario, {
   foreignKey: { name: 'id_usuario', field: 'id_usuario' }
 });
 
+Imperfeccion.belongsTo(Severidad, {
+  foreignKey: { name: 'id_severidad', field: 'id_severidad' }
+});
+
 Reporte.belongsTo(Usuario, {
   foreignKey: { name: 'id_usuario', field: 'id_usuario' }
+});
+
+Reporte.belongsTo(Prioridad, {
+  foreignKey: { name: 'id_prioridad', field: 'id_prioridad' }
 });
 
 module.exports = {
@@ -54,6 +64,8 @@ module.exports = {
   Usuario,
   Imperfeccion,
   Carroceria,
+  Prioridad,
+  Severidad,
   ImperfeccionCarroceria,
   Reporte,
   };

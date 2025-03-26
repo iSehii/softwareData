@@ -4,6 +4,8 @@ require('dotenv').config();
 router.use(express.json());
 const { Index } = require('../controllers/indexController');
 const rolRoutes = require('./rolRoutes');
+const severidadRoutes = require('./severidadRoutes');
+const prioridadRoutes = require('./prioridadRoutes');
 const usuarioRoutes = require('./usuarioRoutes');
 const carroceriaRoutes = require('./carroceriaRoutes');
 const imperfeccionRoutes = require('./imperfeccionRoutes');
@@ -12,6 +14,8 @@ const imagenRoutes = require('./imagenRoutes');
 
 // router.use('/', Index);
 router.use('/roles', rolRoutes);
+router.use('/severidades', severidadRoutes);
+router.use('/prioridades', prioridadRoutes);
 router.use('/usuarios', usuarioRoutes);
 router.use('/imagenes', imagenRoutes);
 router.use('/carrocerias', carroceriaRoutes);

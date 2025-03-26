@@ -26,7 +26,7 @@ exports.crearCarroceria = async (req, res) => {
     try {
         const {
             no_parte, color, panel, descripcion,
-            lote, estado, carroceriascol, id_usuario
+            lote, estado, id_usuario
         } = req.body;
         const nuevaCarroceria = await Carroceria.create({
             no_parte,
@@ -35,7 +35,6 @@ exports.crearCarroceria = async (req, res) => {
             descripcion,
             lote,
             estado,
-            carroceriascol,
             id_usuario
         });
         return res.status(201).json(nuevaCarroceria);
@@ -62,7 +61,6 @@ exports.actualizarCarroceria = async (req, res) => {
             descripcion,
             lote,
             estado,
-            carroceriascol,
             id_usuario
         });
         return res.json(carroceria);

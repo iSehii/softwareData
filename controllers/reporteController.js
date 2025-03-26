@@ -26,13 +26,12 @@ exports.obtenerReporte = async (req, res) => {
 exports.crearReporte = async (req, res) => {
     try {
         const {
-            prioridad, descripcion, reportescol,
+            id_prioridad, descripcion,
             id_imperfecciones, id_carrocerias, id_usuario
         } = req.body;
         const nuevoReporte = await Reporte.create({
-            prioridad,
+            id_prioridad,
             descripcion,
-            reportescol,
             id_imperfecciones,
             id_carrocerias,
             id_usuario
@@ -47,7 +46,7 @@ exports.actualizarReporte = async (req, res) => {
     try {
         const { id } = req.params;
         const {
-            prioridad, descripcion, reportescol,
+            id_prioridad, descripcion,
             id_imperfecciones, id_carrocerias, id_usuario
         } = req.body;
         const reporte = await Reporte.findByPk(id);
@@ -55,9 +54,8 @@ exports.actualizarReporte = async (req, res) => {
             return res.status(404).json({ message: 'Reporte no encontrado' });
         }
         await reporte.update({
-            prioridad,
+            id_prioridad,
             descripcion,
-            reportescol,
             id_imperfecciones,
             id_carrocerias,
             id_usuario

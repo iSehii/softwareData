@@ -1,4 +1,5 @@
 const { Sequelize } = require('sequelize');
+const fs = require('fs');
 require('dotenv').config();
 
 const databaseMySQL = new Sequelize(
@@ -8,8 +9,12 @@ const databaseMySQL = new Sequelize(
   {
     dialect: 'mysql',
     host: process.env.SQLDB_HOST,
+    port: process.env.SQLDB_PORT,
     define: {
       timestamps: true,
+    },
+    dialectOptions: {
+      ca: process.env.SQLDB_CA
     },
   }
 );

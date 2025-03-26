@@ -28,10 +28,10 @@ exports.obtenerImperfeccion = async (req, res) => {
 
 exports.crearImperfeccion = async (req, res) => {
     try {
-        const { coordenadas, severidad, id_usuario } = req.body;
+        const { coordenadas, id_severidad, id_usuario } = req.body;
         const nuevaImperfeccion = await Imperfeccion.create({
             coordenadas,
-            severidad,
+            id_severidad,
             id_usuario
         });
         return res.status(201).json(nuevaImperfeccion);

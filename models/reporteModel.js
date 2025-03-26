@@ -6,7 +6,13 @@ const Reporte = databaseMySQL.define('Reporte', {
         autoIncrement: true,
         primaryKey: true
     },
-    prioridad: DataTypes.INTEGER,
+    id_prioridad: {
+        type: DataTypes.INTEGER,
+        references: {
+            model: 'Prioridades',
+            key: 'id'
+        }
+    },
     descripcion: DataTypes.STRING,
     id_imperfecciones: {
         type: DataTypes.INTEGER,
