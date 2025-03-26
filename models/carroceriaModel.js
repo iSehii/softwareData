@@ -15,7 +15,7 @@ const { databaseMySQL } = require('../config/SQL');
         id_usuario: {
             type: DataTypes.INTEGER,
             references: {
-                model: 'Usuarios',
+                model: 'usuarios',
                 key: 'id'
             }
         }

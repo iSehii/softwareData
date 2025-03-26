@@ -27,7 +27,7 @@ const { databaseMySQL } = require('../config/SQL');
         id_rol: {
             type: DataTypes.INTEGER,
             references: {
-                model: 'Roles',
+                model: 'roles',
                 key: 'id'
             }
         }

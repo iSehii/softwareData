@@ -1,7 +1,7 @@
 const {Rol} = require('../models/rolModel');
+const {Usuario} = require('../models/usuarioModel');
 const { Prioridad } = require('../models/prioridadModel');
 const { Severidad } = require('../models/severidadModel');
-const {Usuario} = require('../models/usuarioModel');
 const {Imperfeccion} = require('../models/imperfeccionModel');
 const {Carroceria} = require('../models/carroceriaModel');
 const {ImperfeccionCarroceria} = require('../models/imperfeccionCarroceriaModel');
@@ -22,7 +22,7 @@ Reporte.belongsTo(Carroceria, {
 Carroceria.belongsToMany(Imperfeccion, {
   through: {
     model: ImperfeccionCarroceria,
-    unique: true
+    unique: false
   },
   foreignKey: { name: 'fk_carr_ic', field: 'id_carrocerias' },
   otherKey: { name: 'fk_imperfeccion_ic', field: 'id_imperfecciones' },
@@ -32,7 +32,7 @@ Carroceria.belongsToMany(Imperfeccion, {
 Imperfeccion.belongsToMany(Carroceria, {
   through: {
     model: ImperfeccionCarroceria,
-    unique: true
+    unique: false
   },
   foreignKey: { name: 'fk_imper_ic', field: 'id_imperfecciones' },
   otherKey: { name: 'fk_carroceria_ic', field: 'id_carrocerias' },

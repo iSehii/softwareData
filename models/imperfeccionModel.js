@@ -11,14 +11,14 @@ const Imperfeccion = databaseMySQL.define('Imperfeccion', {
     id_severidad: {
         type: DataTypes.INTEGER,
         references: {
-            model: 'Severidades',
+            model: 'severidades',
             key: 'id'
         }
     },
     id_usuario: {
         type: DataTypes.INTEGER,
         references: {
-            model: 'Usuarios',
+            model: 'usuarios',
             key: 'id'
         }
     }

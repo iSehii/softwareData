@@ -9,7 +9,7 @@ const Reporte = databaseMySQL.define('Reporte', {
     id_prioridad: {
         type: DataTypes.INTEGER,
         references: {
-            model: 'Prioridades',
+            model: 'prioridades',
             key: 'id'
         }
     },
@@ -17,21 +17,21 @@ const Reporte = databaseMySQL.define('Reporte', {
     id_imperfecciones: {
         type: DataTypes.INTEGER,
         references: {
-            model: 'Imperfecciones',
+            model: 'imperfecciones',
             key: 'id'
         }
     },
     id_carrocerias: {
         type: DataTypes.INTEGER,
         references: {
-            model: 'Carrocerias',
+            model: 'carrocerias',
             key: 'id'
         }
     },
         id_usuario: {
             type: DataTypes.INTEGER,
             references: {
-                model: 'Usuarios',
+                model: 'usuarios',
                 key: 'id'
             }
         }
