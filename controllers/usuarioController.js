@@ -28,15 +28,14 @@ exports.obtenerUsuario = async (req, res) => {
 
 exports.crearUsuario = async (req, res) => {
     try {
-        const { username, nombre, correo, clave, id_rol, id_usuario } = req.body;
+        const { username, nombre, correo, clave, id_rol } = req.body;
         const hashedPassword = await bcrypt.hash(clave, 10);
         const nuevoUsuario = await Usuario.create({
             username,
             nombre,
             correo,
-            hashedPassword,
-            id_rol,
-            id_usuario
+            clave: hashedPassword,
+            id_rol
         });
         return res.status(201).json(nuevoUsuario);
     } catch (error) {

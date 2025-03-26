@@ -1,6 +1,7 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+const { Usuario } = require('../models/usuarioModel');
+
 require("dotenv").config();
 
 exports.register = async (req, res) => {
@@ -11,12 +12,12 @@ exports.register = async (req, res) => {
             return res.status(400).json({ message: "Todos los campos son obligatorios" });
         }
 
-        const hashedPassword = await bcrypt.hash(clave, 10);
-        const user = await User.create({ 
+        const claveEncriptada = await bcrypt.hash(clave, 10);
+        const user = await Usuario.create({ 
             username, 
             nombre, 
             correo, 
-            password: hashedPassword, 
+            clave: claveEncriptada, 
             id_rol, 
             id_usuario 
         });
@@ -35,13 +36,13 @@ exports.login = async (req, res) => {
             return res.status(400).json({ message: "Usuario y contraseña son requeridos" });
         }
 
-        const user = await User.findOne({ where: { username } });
+        const user = await Usuario.findOne({ where: { username } });
 
         if (!user) {
             return res.status(400).json({ message: "Usuario no encontrado" });
         }
 
-        const isMatch = await bcrypt.compare(clave, user.password);
+        const isMatch = await bcrypt.compare(clave, user.clave);
         if (!isMatch) {
             return res.status(400).json({ message: "Contraseña incorrecta" });
         }
