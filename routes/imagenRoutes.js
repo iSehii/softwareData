@@ -4,7 +4,7 @@ const { subirImagen, obtenerImagenes, obtenerImagenPorId, actualizarImagen, elim
 
 const router = Router();
 
-router.post("/crear", subirImagen);         
+router.post("/", subirImagen);         
 router.get("/", obtenerImagenes);            
 router.get("/:id", obtenerImagenPorId);     
 router.put("/:id", actualizarImagen);       
