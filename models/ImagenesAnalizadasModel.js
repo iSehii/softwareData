@@ -35,4 +35,6 @@ const ImagenAnalizadaSchema = new Schema({
   }
 });
 
-module.exports = mongoose.model('imagenes_analizadas', ImagenAnalizadaSchema);
+const ImagenAnalizada = mongoose.model("imagenes_analizadas", ImagenAnalizadaSchema);
+
+module.exports = ImagenAnalizada;
