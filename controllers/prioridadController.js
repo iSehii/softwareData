@@ -25,8 +25,8 @@ exports.obtenerPrioridad = async (req, res) => {
 
 exports.crearPrioridad = async (req, res) => {
     try {
-        const { descripcion } = req.body;
-        const nuevoPrioridad = await Prioridad.create({ descripcion });
+        const { nombre, id_usuario } = req.body;
+        const nuevoPrioridad = await Prioridad.create({ nombre, id_usuario });
         return res.status(201).json(nuevoPrioridad);
     } catch (error) {
         return res.status(500).json({ error: error.message });

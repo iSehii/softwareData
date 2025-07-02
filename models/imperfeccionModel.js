@@ -15,6 +15,10 @@ const Imperfeccion = databaseMySQL.define('Imperfeccion', {
             key: 'id'
         }
     },
+    id_imagen_procesada: {
+        type: DataTypes.STRING,
+        allowNull: true
+    },
     id_usuario: {
         type: DataTypes.INTEGER,
         references: {

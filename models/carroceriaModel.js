@@ -9,7 +9,12 @@ const { databaseMySQL } = require('../config/SQL');
         no_parte: DataTypes.INTEGER,
         color: DataTypes.STRING(45),
         panel: DataTypes.STRING(45),
+        folio: DataTypes.STRING(45),
         descripcion: DataTypes.STRING(45),
+        id_imagen: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
         lote: DataTypes.STRING(45),
         estado: DataTypes.INTEGER,
         id_usuario: {

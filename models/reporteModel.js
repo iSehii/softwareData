@@ -15,6 +15,7 @@ const Reporte = databaseMySQL.define('Reporte', {
     },
     descripcion: DataTypes.STRING,
     id_imperfecciones: {
+        allowNull: true,
         type: DataTypes.INTEGER,
         references: {
             model: 'imperfecciones',
@@ -28,13 +29,13 @@ const Reporte = databaseMySQL.define('Reporte', {
             key: 'id'
         }
     },
-        id_usuario: {
-            type: DataTypes.INTEGER,
-            references: {
-                model: 'usuarios',
-                key: 'id'
-            }
+    id_usuario: {
+        type: DataTypes.INTEGER,
+        references: {
+            model: 'usuarios',
+            key: 'id'
         }
+    }
 }, {
     tableName: 'reportes',
     timestamps: true

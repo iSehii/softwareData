@@ -19,7 +19,7 @@ router.use('/severidades', verificarToken, severidadRoutes);
 router.use('/prioridades', verificarToken, prioridadRoutes);
 router.use('/imagenes', verificarToken, imagenRoutes);
 router.use('/usuarios', verificarToken, usuarioRoutes);
-router.use('/carrocerias', verificarToken, carroceriaRoutes);
+router.use('/carrocerias', verificarToken, carroceriaRoutes); 
 router.use('/imperfecciones', verificarToken, imperfeccionRoutes);
 router.use('/auth', authRoutes);
 router.use('/reportes', verificarToken, reporteRoutes);

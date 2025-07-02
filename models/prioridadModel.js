@@ -6,10 +6,18 @@ const { databaseMySQL } = require('../config/SQL');
             autoIncrement: true,
             primaryKey: true
         },
-        userPrioridadname: {
-            type: DataTypes.STRING(45),
+        nombre: {
+            type: DataTypes.STRING,
+            allowNull: false
+        },
+        id_usuario: {
+            type: DataTypes.INTEGER,
             allowNull: false,
-            unique: false
+            unique: false,
+            references: {
+                model: 'usuarios',
+                key: 'id'
+            }
         }
     }, {
         tableName: 'prioridades',

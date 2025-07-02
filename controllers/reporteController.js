@@ -1,6 +1,5 @@
 const { Reporte } = require('../models/reporteModel');
 
-
 exports.obtenerReportes = async (req, res) => {
     try {
         const reportes = await Reporte.findAll();

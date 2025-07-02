@@ -2,7 +2,6 @@ const Imagen = require("../models/imagenesModel");
 const ImagenesAnalizadas = require("../models/ImagenesAnalizadasModel");
 const multer = require("multer");
 
-// Configurar multer para almacenar la imagen en memoria (no en el disco)
 const storage = multer.memoryStorage();
 const upload = multer({ storage }).single("imagen");
 
@@ -12,8 +11,8 @@ const subirImagen = async (req, res) => {
 
     try {
       const nuevaImagen = new Imagen({
-        imagen: req.file.buffer, // Guarda la imagen como Buffer
-        contentType: req.file.mimetype, // Guarda el tipo de archivo (jpeg, png, etc.)
+        imagen: req.file.buffer, 
+        contentType: req.file.mimetype, 
       });
 
       await nuevaImagen.save();
@@ -41,12 +40,19 @@ const obtenerImagenPorId = async (req, res) => {
     const imagen = await Imagen.findById(req.params.id);
     if (!imagen) return res.status(404).json({ error: "Imagen no encontrada" });
 
-    res.set("Content-Type", imagen.contentType); // Especificar el tipo de imagen
-    res.send(imagen.imagen); // Enviar la imagen binaria
+    const base64 = imagen.imagen.toString("base64");
+    const dataUri = `data:${imagen.contentType};base64,${base64}`;
+
+    res.json({
+      _id: imagen._id,
+      contentType: imagen.contentType,
+      imagenBase64: dataUri,
+    });
   } catch (error) {
     res.status(500).json({ error: "Error al buscar la imagen" });
   }
 };
+
 
 const obtenerDatosPorId = async (req, res) => {
   try {
