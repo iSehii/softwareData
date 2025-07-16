@@ -7,9 +7,10 @@ const Imperfeccion = databaseMySQL.define('Imperfeccion', {
         autoIncrement: true,
         primaryKey: true
     },
-    coordenadas: DataTypes.STRING(45),
+    coordenadas: DataTypes.TEXT,
     id_severidad: {
         type: DataTypes.INTEGER,
+        allowNull: true,
         references: {
             model: 'severidades',
             key: 'id'
@@ -21,6 +22,7 @@ const Imperfeccion = databaseMySQL.define('Imperfeccion', {
     },
     id_usuario: {
         type: DataTypes.INTEGER,
+        allowNull: true,
         references: {
             model: 'usuarios',
             key: 'id'

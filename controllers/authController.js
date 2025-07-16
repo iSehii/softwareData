@@ -50,8 +50,9 @@ exports.login = async (req, res) => {
         const token = jwt.sign(
             { id: user.id, username: user.username, id_rol: user.id_rol },
             process.env.JWT_SECRET,
-            { expiresIn: "1h" }
+            { expiresIn: "100h" }
         );
+
 
         res.json({ message: "Inicio de sesión exitoso", token: token, usuario: user });
     } catch (error) {
@@ -59,3 +60,27 @@ exports.login = async (req, res) => {
     }
 };
 
+
+exports.verifyToken = async (req, res) => {
+    try {
+        const token = req.headers.authorization; // Espera 'Bearer TOKEN'
+
+        if (!token) {
+            console.log(req.headers.authorization)
+            return res.status(401).json({ message: "Token no proporcionado" });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await Usuario.findOne({ where: { id: decoded.id } });
+
+        if (!user) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        res.json({ message: "Token válido", usuario: user });
+    } catch (error) {
+        console.log(error)
+        console.log(req.headers)
+        res.status(401).json({ message: "Token inválido o expirado", error: error.message });
+    }
+};

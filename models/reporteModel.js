@@ -8,6 +8,7 @@ const Reporte = databaseMySQL.define('Reporte', {
     },
     id_prioridad: {
         type: DataTypes.INTEGER,
+        allowNull: true,
         references: {
             model: 'prioridades',
             key: 'id'

@@ -63,14 +63,19 @@ const obtenerDatosPorId = async (req, res) => {
   }
 };
 
-// Obtener una imagen por ID y devolverla en formato binario
 const obtenerImagenAnalizadaPorId = async (req, res) => {
   try {
     const imagen = await ImagenesAnalizadas.findById(req.params.id);
     if (!imagen) return res.status(404).json({ error: "Imagen no encontrada" });
 
-    res.set("Content-Type", imagen.contentType); // Especificar el tipo de imagen
-    res.send(imagen.imagen_resultado); // Enviar la imagen binaria
+    const base64 = imagen.imagen_resultado.toString("base64");
+    const dataUri = `data:${imagen.contentType};base64,${base64}`;
+
+    res.json({
+      _id: imagen._id,
+      contentType: imagen.contentType,
+      imagenBase64: dataUri,
+    });
   } catch (error) {
     res.status(500).json({ error: "Error al buscar la imagen" });
   }

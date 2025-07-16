@@ -1,5 +1,5 @@
 const { Router } = require('express');
-const { obtenerCarroceria, obtenerCarrocerias, eliminarCarroceria, actualizarCarroceria, crearCarroceria, obtenerFolio } = require('../controllers/carroceriaController');
+const { obtenerCarroceria, obtenerCarrocerias, eliminarCarroceria, actualizarCarroceria, crearCarroceria, obtenerFolio, generarReporte } = require('../controllers/carroceriaController');
 
 const router = Router();
 
@@ -9,5 +9,6 @@ router.get('/:id', obtenerCarroceria);
 router.post('/', crearCarroceria);
 router.put('/:id', actualizarCarroceria);
 router.delete('/:id', eliminarCarroceria);
+router.post('/:id/generar-reporte', generarReporte);
 
 module.exports = router;
