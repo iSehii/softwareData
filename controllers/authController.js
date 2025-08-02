@@ -63,13 +63,14 @@ exports.login = async (req, res) => {
 
 exports.verifyToken = async (req, res) => {
     try {
-        const token = req.headers.authorization; // Espera 'Bearer TOKEN'
+        const authHeader = req.headers.authorization; // Espera 'Bearer TOKEN'
 
-        if (!token) {
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
             console.log(req.headers.authorization)
-            return res.status(401).json({ message: "Token no proporcionado" });
+            return res.status(401).json({ message: "Token no proporcionado o formato incorrecto" });
         }
 
+        const token = authHeader.substring(7); // Remove 'Bearer ' prefix
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         const user = await Usuario.findOne({ where: { id: decoded.id } });
 
@@ -81,6 +82,40 @@ exports.verifyToken = async (req, res) => {
     } catch (error) {
         console.log(error)
         console.log(req.headers)
+        res.status(401).json({ message: "Token inválido o expirado", error: error.message });
+    }
+};
+
+exports.refreshToken = async (req, res) => {
+    try {
+        const authHeader = req.headers.authorization;
+
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ message: "Token no proporcionado" });
+        }
+
+        const token = authHeader.substring(7);
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await Usuario.findOne({ where: { id: decoded.id } });
+
+        if (!user) {
+            return res.status(404).json({ message: "Usuario no encontrado" });
+        }
+
+        // Generate new token
+        const newToken = jwt.sign(
+            { id: user.id, username: user.username, id_rol: user.id_rol },
+            process.env.JWT_SECRET,
+            { expiresIn: "100h" }
+        );
+
+        res.json({ 
+            message: "Token renovado exitosamente", 
+            newToken: newToken,
+            usuario: user 
+        });
+    } catch (error) {
+        console.log('Token refresh error:', error);
         res.status(401).json({ message: "Token inválido o expirado", error: error.message });
     }
 };
