@@ -17,7 +17,8 @@ exports.obtenerCarrocerias = async (req, res) => {
         const carroceriasConReporte = await Promise.all(
             carrocerias.map(async (carroceria) => {
                 const reporte = await Reporte.findOne({
-                    where: { id_carrocerias: carroceria.id }
+                    where: { id_carrocerias: carroceria.id },
+                    order: [['createdAt', 'DESC']]
                 });
                 
                 return {
@@ -64,7 +65,7 @@ exports.obtenerCarroceria = async (req, res) => {
     }
 }
 
-const ia_api = process.env.IA_API_URL; // Asegúrate de tener la URL de la API en tus variables de entorno
+const ia_api = process.env.IA_API_URL; 
 
 exports.crearCarroceria = (req, res) => {
     upload(req, res, async (err) => {
@@ -74,7 +75,6 @@ exports.crearCarroceria = (req, res) => {
         }
 
         try {
-            // 1. Extraer datos del cuerpo de la solicitud
             const {
                 no_parte,
                 color,
@@ -84,12 +84,11 @@ exports.crearCarroceria = (req, res) => {
                 lote,
                 estado,
                 id_usuario,
-                id_prioridad // Se necesita para el reporte
+                id_prioridad 
             } = req.body;
 
             let id_imagen = null;
 
-            // 2. Guardar la imagen si existe
             if (req.file) {
                 try {
                     const nuevaImagen = new Imagen({
@@ -104,9 +103,8 @@ exports.crearCarroceria = (req, res) => {
                 }
             }
 
-            // 3. Verificar y generar un folio único
             let nuevoFolio = folio;
-            if (!nuevoFolio) { // Si no se provee un folio, se genera uno
+            if (!nuevoFolio) { 
                 const ultima = await Carroceria.findOne({ order: [['id', 'DESC']] });
                 const siguienteId = ultima ? ultima.id + 1 : 1;
                 nuevoFolio = `CAR-${siguienteId}`;
@@ -119,7 +117,6 @@ exports.crearCarroceria = (req, res) => {
                 existe = await Carroceria.findOne({ where: { folio: nuevoFolio } });
             }
 
-            // 4. Crear la nueva carrocería
             const nuevaCarroceria = await Carroceria.create({
                 no_parte,
                 color: color || "#FFFFFF",
@@ -132,55 +129,49 @@ exports.crearCarroceria = (req, res) => {
                 id_usuario
             });
 
-            // 5. Generar reporte automáticamente si se adjuntó una imagen
             if (id_imagen) {
-                console.log("Iniciando la generación de reporte para la carrocería:", nuevaCarroceria.id);
-                try {
-                    // Llamada a la API de IA para analizar la imagen
-                    const analizarImagen = await axios.post(`${ia_api}/analizar`, {
-                        id: id_imagen,
-                        color_referencia: color // Usamos el color de la carrocería
-                    });
+                console.log("Programando generación de reporte para la carrocería:", nuevaCarroceria.id);
+                
+                setImmediate(async () => {
+                    try {
+                        const analizarImagen = await axios.post(`${ia_api}/analizar`, {
+                            id: id_imagen,
+                            color_referencia: color
+                        });
 
-                    let id_imperfecciones = null;
-                    console.log("Analizar imagen:", analizarImagen);
-                    console.log("Analizar imagen:2", analizarImagen.data.imperfecciones_detectadas);
-                    console.log("Analizar imagen:2", analizarImagen.data.detalles);
-                    console.log("Analizar imagen:2", analizarImagen.data.cuadricula_afectada);
-                    // Si la IA detecta imperfecciones, las guardamos
-                    if (analizarImagen.data.imperfecciones_detectadas > 0) {
-                        try {
-                            const { coordenadas, id_resultado } = analizarImagen.data;
-                            const nuevaImperfeccion = await Imperfeccion.create({
-                                coordenadas: coordenadas,
-                                id_severidad: null, // Asignar después si es necesario
-                                id_imagen_procesada: id_resultado,
-                                id_usuario: id_usuario // Se puede asignar el mismo usuario
-                            });
-                            id_imperfecciones = nuevaImperfeccion.id;
-                            console.log("Imperfección creada con ID:", id_imperfecciones);
-                        } catch (errorImperfeccion) {
-                            // Si falla la creación de la imperfección, solo lo registramos pero no detenemos el flujo
-                             console.error("Error al guardar la imperfección:", errorImperfeccion);
+                        let id_imperfecciones = null;
+                        
+                        if (analizarImagen.data.imperfecciones_detectadas > 0) {
+                            try {
+                                const { coordenadas, id_resultado } = analizarImagen.data;
+                                const nuevaImperfeccion = await Imperfeccion.create({
+                                    coordenadas: coordenadas,
+                                    id_severidad: null,
+                                    id_imagen_procesada: id_resultado,
+                                    id_usuario: id_usuario
+                                });
+                                id_imperfecciones = nuevaImperfeccion.id;
+                                console.log("Imperfección creada con ID:", id_imperfecciones);
+                            } catch (errorImperfeccion) {
+                                console.error("Error al guardar la imperfección:", errorImperfeccion);
+                            }
                         }
+
+                        await Reporte.create({
+                            id_prioridad: id_prioridad || null,
+                            descripcion: descripcion || "Reporte generado automáticamente",
+                            id_imperfecciones,
+                            id_carrocerias: nuevaCarroceria.id, 
+                            id_usuario
+                        });
+                        
+                        console.log("Reporte generado exitosamente para la carrocería:", nuevaCarroceria.id);
+                    } catch (errorReporte) {
+                        console.warn("Advertencia: La carrocería se creó, pero falló la generación del reporte:", errorReporte.message);
                     }
-
-                    // Crear el registro del reporte
-                    await Reporte.create({
-                        id_prioridad: id_prioridad || null,
-                        descripcion: descripcion || "Reporte generado automáticamente",
-                        id_imperfecciones,
-                        id_carrocerias: nuevaCarroceria.id, 
-                        id_usuario
-                    });
-                     console.log("Reporte generado exitosamente para la carrocería:", nuevaCarroceria.id);
-
-                } catch (errorReporte) {
-                    console.warn("Advertencia: La carrocería se creó, pero falló la generación del reporte:", errorReporte.message);
-                }
+                });
             }
 
-            // 6. Enviar respuesta exitosa con la carrocería creada
             return res.status(201).json(nuevaCarroceria);
 
         } catch (error) {
@@ -274,64 +265,66 @@ exports.generarReporte = async (req, res) => {
         const { id } = req.params;
         const { id_prioridad, descripcion, id_usuario } = req.body;
 
-        // Verificar que la carrocería existe
-        const carroceria = await Carroceria.findByPk(id);
+        const [carroceria, reporteExistente] = await Promise.all([
+            Carroceria.findByPk(id),
+            Reporte.findOne({ where: { id_carrocerias: id } })
+        ]);
+
         if (!carroceria) {
             return res.status(404).json({ message: 'Carrocería no encontrada' });
         }
-
-        // Verificar si ya tiene un reporte
-        const reporteExistente = await Reporte.findOne({
-            where: { id_carrocerias: id }
-        });
 
         if (reporteExistente) {
             return res.status(400).json({ message: 'Esta carrocería ya tiene un reporte generado' });
         }
 
-        // Verificar que tenga imagen
         if (!carroceria.id_imagen) {
             return res.status(400).json({ message: 'La carrocería debe tener una imagen para generar el reporte' });
         }
 
         console.log("Generando reporte manualmente para la carrocería:", id);
         
-        // Llamada a la API de IA para analizar la imagen
-        const analizarImagen = await axios.post(`${ia_api}/analizar`, {
-            id: carroceria.id_imagen,
-            color_referencia: carroceria.color
-        });
-
-        let id_imperfecciones = null;
-
-        // Si la IA detecta imperfecciones, las guardamos
-        if (analizarImagen?.data?.imperfecciones_detectadas > 0) {
-            try {
-                const { coordenadas, imagen_resultado } = analizarImagen.data;
-                const nuevaImperfeccion = await Imperfeccion.create({
-                    coordenadas: coordenadas,
-                    id_severidad: null,
-                    id_imagen_procesada: imagen_resultado,
-                    id_usuario: id_usuario
-                });
-                id_imperfecciones = nuevaImperfeccion.id;
-                console.log("Imperfección creada con ID:", id_imperfecciones);
-            } catch (errorImperfeccion) {
-                console.error("Error al guardar la imperfección:", errorImperfeccion);
-            }
-        }
-
-        // Crear el registro del reporte
         const nuevoReporte = await Reporte.create({
             id_prioridad: id_prioridad || null,
             descripcion: descripcion || "Reporte generado manualmente",
-            id_imperfecciones,
+            id_imperfecciones: null, 
             id_carrocerias: id,
             id_usuario
         });
 
-        console.log("Reporte generado exitosamente para la carrocería:", id);
-        return res.status(201).json(nuevoReporte);
+        setImmediate(async () => {
+            try {
+                const analizarImagen = await axios.post(`${ia_api}/analizar`, {
+                    id: carroceria.id_imagen,
+                    color_referencia: carroceria.color
+                });
+
+                if (analizarImagen?.data?.imperfecciones_detectadas > 0) {
+                    try {
+                        const { coordenadas, imagen_resultado } = analizarImagen.data;
+                        const nuevaImperfeccion = await Imperfeccion.create({
+                            coordenadas: coordenadas,
+                            id_severidad: null,
+                            id_imagen_procesada: imagen_resultado,
+                            id_usuario: id_usuario
+                        });
+                        
+                        await nuevoReporte.update({ id_imperfecciones: nuevaImperfeccion.id });
+                        
+                        console.log("Imperfección creada con ID:", nuevaImperfeccion.id);
+                    } catch (errorImperfeccion) {
+                        console.error("Error al guardar la imperfección:", errorImperfeccion);
+                    }
+                }
+            } catch (error) {
+                console.error("Error en análisis de IA:", error);
+            }
+        });
+
+        return res.status(201).json({
+            ...nuevoReporte.toJSON(),
+            message: "Reporte creado exitosamente. El análisis de IA se está procesando en background."
+        });
 
     } catch (error) {
         console.error("Error al generar reporte:", error);
