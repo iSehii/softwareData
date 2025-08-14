@@ -14,6 +14,11 @@ const Reporte = databaseMySQL.define('Reporte', {
             key: 'id'
         }
     },
+    status: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        defaultValue: 'Pendiente'
+    },
     descripcion: DataTypes.STRING,
     id_imperfecciones: {
         allowNull: true,

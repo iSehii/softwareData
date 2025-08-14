@@ -305,11 +305,12 @@ exports.generarReporte = async (req, res) => {
                         const nuevaImperfeccion = await Imperfeccion.create({
                             coordenadas: coordenadas,
                             id_severidad: null,
+                            status: 'Procesando',
                             id_imagen_procesada: id_resultado,
                             id_usuario: id_usuario
                         });
                         
-                        await nuevoReporte.update({ id_imperfecciones: nuevaImperfeccion.id });
+                        await nuevoReporte.update({ id_imperfecciones: nuevaImperfeccion.id, status: 'Completado' });
                         
                         console.log("Imperfección creada con ID:", nuevaImperfeccion.id);
                     } catch (errorImperfeccion) {
