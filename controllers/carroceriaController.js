@@ -143,11 +143,11 @@ exports.crearCarroceria = (req, res) => {
                         
                         if (analizarImagen.data.imperfecciones_detectadas > 0) {
                             try {
-                                const { coordenadas, id_resultado } = analizarImagen.data;
+                                
                                 const nuevaImperfeccion = await Imperfeccion.create({
-                                    coordenadas: coordenadas,
+                                    coordenadas: analizarImagen.data.coordenadas,
                                     id_severidad: null,
-                                    id_imagen_procesada: id_resultado,
+                                    id_imagen_procesada: analizarImagen.data.id_resultado,
                                     id_usuario: id_usuario
                                 });
                                 id_imperfecciones = nuevaImperfeccion.id;
@@ -301,11 +301,11 @@ exports.generarReporte = async (req, res) => {
 
                 if (analizarImagen?.data?.imperfecciones_detectadas > 0) {
                     try {
-                        const { coordenadas, imagen_resultado } = analizarImagen.data;
+                        const { coordenadas, id_resultado } = analizarImagen.data;
                         const nuevaImperfeccion = await Imperfeccion.create({
                             coordenadas: coordenadas,
                             id_severidad: null,
-                            id_imagen_procesada: imagen_resultado,
+                            id_imagen_procesada: id_resultado,
                             id_usuario: id_usuario
                         });
                         
