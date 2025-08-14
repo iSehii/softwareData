@@ -38,7 +38,6 @@ exports.obtenerCarroceria = async (req, res) => {
     try {
         const { id } = req.params;
         let carroceria;
-
         if (!isNaN(id)) {
             carroceria = await Carroceria.findByPk(id);
         } else {
@@ -56,7 +55,8 @@ exports.obtenerCarroceria = async (req, res) => {
 
         const carroceriaConReporte = {
             ...carroceria.toJSON(),
-            tiene_reporte: !!reporte
+            tiene_reporte: !!reporte,
+            id_reporte: reporte?.id
         };
 
         return res.json(carroceriaConReporte);
