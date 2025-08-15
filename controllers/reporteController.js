@@ -21,8 +21,13 @@ exports.obtenerReporte = async (req, res) => {
         if (!reporte) {
             return res.status(404).json({ message: 'Reporte no encontrado' });
         }
-        return res.json(reporte);
+        const imperfecciones = await Imperfeccion.findByPk(reporte.id_imperfecciones);
+        const imagen_analizada = await ImagenesAnalizadas
+            .findById(imperfecciones.id_imagen_procesada)
+            .select('-imagen_resultado'); // Excluir el binario de la imagen procesada
+        return res.json({ reporte, imperfecciones, imagen_analizada });
     } catch (error) {
+        console.log(error);
         return res.status(500).json({ error: error.message });
     }
 }

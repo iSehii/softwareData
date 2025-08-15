@@ -52,6 +52,7 @@ exports.obtenerCarroceria = async (req, res) => {
         const reporte = await Reporte.findOne({
             where: { id_carrocerias: carroceria.id }
         });
+        console.log(reporte);
 
         const carroceriaConReporte = {
             ...carroceria.toJSON(),
