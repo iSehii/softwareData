@@ -132,7 +132,16 @@ exports.crearCarroceria = (req, res) => {
 
             if (id_imagen) {
                 console.log("Programando generación de reporte para la carrocería:", nuevaCarroceria.id);
-                
+
+                // Crear el reporte en estado Pendiente antes del análisis
+                const nuevoReporte = await Reporte.create({
+                    id_prioridad: id_prioridad || null,
+                    descripcion: descripcion || "Reporte generado automáticamente",
+                    id_imperfecciones: null,
+                    id_carrocerias: nuevaCarroceria.id,
+                    id_usuario
+                });
+
                 setImmediate(async () => {
                     try {
                         const analizarImagen = await axios.post(`${ia_api}/analizar`, {
@@ -141,10 +150,9 @@ exports.crearCarroceria = (req, res) => {
                         });
 
                         let id_imperfecciones = null;
-                        
+
                         if (analizarImagen.data.imperfecciones_detectadas > 0) {
                             try {
-                                
                                 const nuevaImperfeccion = await Imperfeccion.create({
                                     coordenadas: analizarImagen.data.coordenadas,
                                     id_severidad: null,
@@ -153,20 +161,18 @@ exports.crearCarroceria = (req, res) => {
                                 });
                                 id_imperfecciones = nuevaImperfeccion.id;
                                 console.log("Imperfección creada con ID:", id_imperfecciones);
+
+                                // Actualizar el reporte con la imperfección y marcar como Completado
+                                await nuevoReporte.update({
+                                    id_imperfecciones: id_imperfecciones,
+                                    status: 'Completado'
+                                });
                             } catch (errorImperfeccion) {
                                 console.error("Error al guardar la imperfección:", errorImperfeccion);
                             }
                         }
 
-                        await Reporte.create({
-                            id_prioridad: id_prioridad || null,
-                            descripcion: descripcion || "Reporte generado automáticamente",
-                            id_imperfecciones,
-                            id_carrocerias: nuevaCarroceria.id, 
-                            id_usuario
-                        });
-                        
-                        console.log("Reporte generado exitosamente para la carrocería:", nuevaCarroceria.id);
+                        console.log("Reporte actualizado exitosamente para la carrocería:", nuevaCarroceria.id);
                     } catch (errorReporte) {
                         console.warn("Advertencia: La carrocería se creó, pero falló la generación del reporte:", errorReporte.message);
                     }
