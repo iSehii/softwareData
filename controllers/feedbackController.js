@@ -1,8 +1,8 @@
-const { Feedback } = require('../models/feedbackModel');
+const Feedback = require('../models/feedbackModel');
 
 exports.obtenerFeedbacks = async (req, res) => {
     try {
-        const feedbacks = await Feedback.findAll();
+        const feedbacks = await Feedback.find();
         res.json(feedbacks);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -12,7 +12,8 @@ exports.obtenerFeedbacks = async (req, res) => {
 exports.obtenerFeedback = async (req, res) => {
     try {
         const { id } = req.params;
-        const feedback = await Feedback.findByPk(id);
+        const feedback = await Feedback.findById(id);
+        if (!feedback) return res.status(404).json({ message: 'Feedback no encontrado' });
         res.json(feedback);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -33,7 +34,12 @@ exports.actualizarFeedback = async (req, res) => {
     try {
         const { id } = req.params;
         const { comentario, id_usuario, imagen, id_imperfeccion } = req.body;
-        const feedback = await Feedback.update({ comentario, id_usuario, imagen, id_imperfeccion }, { where: { id } });
+        const feedback = await Feedback.findByIdAndUpdate(
+            id,
+            { comentario, id_usuario, imagen, id_imperfeccion },
+            { new: true }
+        );
+        if (!feedback) return res.status(404).json({ message: 'Feedback no encontrado' });
         res.json(feedback);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -43,7 +49,8 @@ exports.actualizarFeedback = async (req, res) => {
 exports.eliminarFeedback = async (req, res) => {
     try {
         const { id } = req.params;
-        await Feedback.destroy({ where: { id } });
+        const deleted = await Feedback.findByIdAndDelete(id);
+        if (!deleted) return res.status(404).json({ message: 'Feedback no encontrado' });
         res.json({ message: 'Feedback eliminado correctamente' });
     } catch (error) {
         res.status(500).json({ error: error.message });
