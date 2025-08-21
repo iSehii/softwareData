@@ -22,8 +22,8 @@ exports.obtenerFeedback = async (req, res) => {
 
 exports.crearFeedback = async (req, res) => {
     try {
-        const { comentario, id_usuario, imagen, id_imperfeccion } = req.body;
-        const feedback = await Feedback.create({ comentario, id_usuario, imagen, id_imperfeccion });
+        const { comentario, id_usuario, imagen } = req.body;
+        const feedback = await Feedback.create({ comentario, id_usuario, imagen });
         res.json(feedback);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -33,10 +33,10 @@ exports.crearFeedback = async (req, res) => {
 exports.actualizarFeedback = async (req, res) => {
     try {
         const { id } = req.params;
-        const { comentario, id_usuario, imagen, id_imperfeccion } = req.body;
+        const { comentario, id_usuario, imagen } = req.body;
         const feedback = await Feedback.findByIdAndUpdate(
             id,
-            { comentario, id_usuario, imagen, id_imperfeccion },
+            { comentario, id_usuario, imagen },
             { new: true }
         );
         if (!feedback) return res.status(404).json({ message: 'Feedback no encontrado' });
