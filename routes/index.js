@@ -12,10 +12,13 @@ const imperfeccionRoutes = require('./imperfeccionRoutes');
 const reporteRoutes = require('./reporteRoutes');
 const imagenRoutes = require('./imagenRoutes');
 const feedbackRoutes = require('./feedbackRoutes');
+const permissionRoutes = require('./permissionRoutes');
 const { verificarToken } = require('../middlewares/authMiddleware');
 const authRoutes = require('./authRoutes');
+
 // router.use('/', Index);
 router.use('/roles', verificarToken, rolRoutes);
+router.use('/permissions', verificarToken, permissionRoutes);
 router.use('/severidades', verificarToken, severidadRoutes);
 router.use('/prioridades', verificarToken, prioridadRoutes);
 router.use('/imagenes', verificarToken, imagenRoutes);
@@ -25,4 +28,5 @@ router.use('/carrocerias', verificarToken, carroceriaRoutes);
 router.use('/imperfecciones', verificarToken, imperfeccionRoutes);
 router.use('/auth', authRoutes);
 router.use('/reportes', verificarToken, reporteRoutes);
+
 module.exports = router;

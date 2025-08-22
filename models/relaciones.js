@@ -6,8 +6,11 @@ const {Imperfeccion} = require('../models/imperfeccionModel');
 const {Carroceria} = require('../models/carroceriaModel');
 const {ImperfeccionCarroceria} = require('../models/imperfeccionCarroceriaModel');
 const {Reporte} = require('../models/reporteModel');
+const { Permission } = require('../models/permissionModel');
+const { RolePermission } = require('../models/rolePermissionModel');
+const { UserPermission } = require('../models/userPermissionModel');
 
-
+// Relaciones existentes
 Usuario.belongsTo(Rol, {
   foreignKey: { name: 'id_rol', field: 'id_rol' }
 });
@@ -59,6 +62,52 @@ Reporte.belongsTo(Prioridad, {
   foreignKey: { name: 'id_prioridad', field: 'id_prioridad' }
 });
 
+// Relaciones del sistema RBAC
+Rol.belongsToMany(Permission, {
+  through: RolePermission,
+  foreignKey: 'role_id',
+  otherKey: 'permission_id',
+  as: 'permissions'
+});
+
+Permission.belongsToMany(Rol, {
+  through: RolePermission,
+  foreignKey: 'permission_id',
+  otherKey: 'role_id',
+  as: 'roles'
+});
+
+Usuario.belongsToMany(Permission, {
+  through: UserPermission,
+  foreignKey: 'usuario_id',
+  otherKey: 'permission_id',
+  as: 'userPermissions'
+});
+
+Permission.belongsToMany(Usuario, {
+  through: UserPermission,
+  foreignKey: 'permission_id',
+  otherKey: 'usuario_id',
+  as: 'users'
+});
+
+// Relaciones directas para facilitar consultas
+RolePermission.belongsTo(Rol, {
+  foreignKey: 'role_id'
+});
+
+RolePermission.belongsTo(Permission, {
+  foreignKey: 'permission_id'
+});
+
+UserPermission.belongsTo(Usuario, {
+  foreignKey: 'usuario_id'
+});
+
+UserPermission.belongsTo(Permission, {
+  foreignKey: 'permission_id'
+});
+
 module.exports = {
   Rol,
   Usuario,
@@ -68,5 +117,8 @@ module.exports = {
   Severidad,
   ImperfeccionCarroceria,
   Reporte,
-  };
+  Permission,
+  RolePermission,
+  UserPermission
+};
   
