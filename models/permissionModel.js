@@ -10,7 +10,7 @@ const Permission = databaseMySQL.define('Permission', {
     module: {
         type: DataTypes.STRING(50),
         allowNull: false,
-        comment: 'Módulo del sistema: USUARIOS, CARROCERIAS, REPORTES, etc.'
+        comment: 'Módulo del sistema: Usuarios, CARROCERIAS, REPORTES, etc.'
     },
     action: {
         type: DataTypes.STRING(50),

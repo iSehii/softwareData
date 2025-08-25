@@ -90,7 +90,7 @@ function checkAllPermissions(permissions) {
 
 // Constantes para módulos y acciones comunes
 const MODULES = {
-    USUARIOS: 'USUARIOS',
+    Usuarios: 'Usuarios',
     CARROCERIAS: 'CARROCERIAS',
     REPORTES: 'REPORTES',
     ROLES: 'ROLES',
