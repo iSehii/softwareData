@@ -10,10 +10,19 @@ const Rol = databaseMySQL.define('Rol', {
         type: DataTypes.STRING(50),
         allowNull: false,
         unique: true
+    },
+    codigo: {
+        type: DataTypes.STRING(10),
+        allowNull: false,
+        unique: true
+    },
+    descripcion: {
+        type: DataTypes.TEXT,
+        allowNull: true
     }
 }, {
     tableName: 'roles',
-    timestamps: false
+    timestamps: true
 });
 
 module.exports = { Rol };

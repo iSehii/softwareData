@@ -10,7 +10,7 @@ function checkPermission(module, action) {
             );
             
             if (!hasPermission) {
-                console.log(`❌ [PERMISSION] Usuario ${req.user?.id} no tiene permiso ${module}:${action}`);
+                console.log(`[PERMISSION] Usuario ${req.user?.id} no tiene permiso ${module}:${action}`);
                 return res.status(403).json({ 
                     error: 'Acceso denegado',
                     message: `No tienes permiso para realizar la acción ${action} en el módulo ${module}`,
@@ -19,10 +19,10 @@ function checkPermission(module, action) {
                 });
             }
             
-            console.log(`✅ [PERMISSION] Usuario ${req.user?.id} tiene permiso ${module}:${action}`);
+            console.log(`[PERMISSION] Usuario ${req.user?.id} tiene permiso ${module}:${action}`);
             next();
         } catch (error) {
-            console.error('❌ [PERMISSION] Error al verificar permisos:', error);
+            console.error('[PERMISSION] Error al verificar permisos:', error);
             res.status(500).json({ error: 'Error interno al verificar permisos' });
         }
     };
@@ -40,7 +40,7 @@ function checkAnyPermission(permissions) {
             );
             
             if (!hasAnyPermission) {
-                console.log(`❌ [PERMISSION] Usuario ${req.user?.id} no tiene ninguno de los permisos requeridos:`, permissions);
+                console.log(`[PERMISSION] Usuario ${req.user?.id} no tiene ninguno de los permisos requeridos:`, permissions);
                 return res.status(403).json({ 
                     error: 'Acceso denegado',
                     message: 'No tienes permisos suficientes para realizar esta acción',
@@ -49,10 +49,10 @@ function checkAnyPermission(permissions) {
                 });
             }
             
-            console.log(`✅ [PERMISSION] Usuario ${req.user?.id} tiene al menos uno de los permisos requeridos`);
+            console.log(`[PERMISSION] Usuario ${req.user?.id} tiene al menos uno de los permisos requeridos`);
             next();
         } catch (error) {
-            console.error('❌ [PERMISSION] Error al verificar permisos:', error);
+            console.error('[PERMISSION] Error al verificar permisos:', error);
             res.status(500).json({ error: 'Error interno al verificar permisos' });
         }
     };
@@ -70,7 +70,7 @@ function checkAllPermissions(permissions) {
             );
             
             if (!hasAllPermissions) {
-                console.log(`❌ [PERMISSION] Usuario ${req.user?.id} no tiene todos los permisos requeridos:`, permissions);
+                console.log(`[PERMISSION] Usuario ${req.user?.id} no tiene todos los permisos requeridos:`, permissions);
                 return res.status(403).json({ 
                     error: 'Acceso denegado',
                     message: 'No tienes todos los permisos necesarios para realizar esta acción',
@@ -79,10 +79,10 @@ function checkAllPermissions(permissions) {
                 });
             }
             
-            console.log(`✅ [PERMISSION] Usuario ${req.user?.id} tiene todos los permisos requeridos`);
+            console.log(`[PERMISSION] Usuario ${req.user?.id} tiene todos los permisos requeridos`);
             next();
         } catch (error) {
-            console.error('❌ [PERMISSION] Error al verificar permisos:', error);
+            console.error('[PERMISSION] Error al verificar permisos:', error);
             res.status(500).json({ error: 'Error interno al verificar permisos' });
         }
     };

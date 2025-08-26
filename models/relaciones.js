@@ -9,6 +9,7 @@ const {Reporte} = require('../models/reporteModel');
 const { Permission } = require('../models/permissionModel');
 const { RolePermission } = require('../models/rolePermissionModel');
 const { UserPermission } = require('../models/userPermissionModel');
+const { CodigoUsuario } = require('../models/codigoUsuarioModel');
 
 // Relaciones existentes
 Usuario.belongsTo(Rol, {
@@ -91,6 +92,17 @@ Permission.belongsToMany(Usuario, {
   as: 'users'
 });
 
+// Relaciones para códigos de activación
+Usuario.hasMany(CodigoUsuario, {
+  foreignKey: 'usuario_id',
+  as: 'codigos'
+});
+
+CodigoUsuario.belongsTo(Usuario, {
+  foreignKey: 'usuario_id',
+  as: 'usuario'
+});
+
 // Relaciones directas para facilitar consultas
 RolePermission.belongsTo(Rol, {
   foreignKey: 'role_id'
@@ -119,6 +131,7 @@ module.exports = {
   Reporte,
   Permission,
   RolePermission,
-  UserPermission
+  UserPermission,
+  CodigoUsuario
 };
   
