@@ -21,11 +21,29 @@ exports.obtenerReporte = async (req, res) => {
         if (!reporte) {
             return res.status(404).json({ message: 'Reporte no encontrado' });
         }
-        const imperfecciones = await Imperfeccion.findByPk(reporte.id_imperfecciones);
-        const imagen_analizada = await ImagenesAnalizadas
-            .findById(imperfecciones.id_imagen_procesada)
-            .select('-imagen_resultado'); // Excluir el binario de la imagen procesada
-        return res.json({ reporte, imperfecciones, imagen_analizada });
+
+        let imperfecciones = null;
+        let imagen_analizada = null;
+
+        // Solo buscar imperfecciones si el reporte tiene id_imperfecciones
+        if (reporte.id_imperfecciones) {
+            imperfecciones = await Imperfeccion.findByPk(reporte.id_imperfecciones);
+            
+            // Solo buscar imagen analizada si la imperfección tiene id_imagen_procesada
+            if (imperfecciones && imperfecciones.id_imagen_procesada) {
+                imagen_analizada = await ImagenesAnalizadas
+                    .findById(imperfecciones.id_imagen_procesada)
+                    .select('-imagen_resultado'); // Excluir el binario de la imagen procesada
+            }
+        }
+
+        return res.json({ 
+            reporte, 
+            imperfecciones, 
+            imagen_analizada,
+            tiene_imagen: !!imagen_analizada,
+            tiene_imperfecciones: !!imperfecciones
+        });
     } catch (error) {
         console.log(error);
         return res.status(500).json({ error: error.message });

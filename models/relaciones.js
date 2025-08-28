@@ -23,6 +23,17 @@ Reporte.belongsTo(Carroceria, {
   foreignKey: { name: 'fk_reporte_carroceria', field: 'id_carrocerias' }
 });
 
+// Relaciones inversas para facilitar consultas
+Carroceria.hasMany(Reporte, {
+  foreignKey: { name: 'fk_reporte_carroceria', field: 'id_carrocerias' },
+  as: 'reportes'
+});
+
+Imperfeccion.hasMany(Reporte, {
+  foreignKey: { name: 'fk_reporte_imperfeccion', field: 'id_imperfecciones' },
+  as: 'reportes'
+});
+
 Carroceria.belongsToMany(Imperfeccion, {
   through: {
     model: ImperfeccionCarroceria,
@@ -76,6 +87,17 @@ Permission.belongsToMany(Rol, {
   foreignKey: 'permission_id',
   otherKey: 'role_id',
   as: 'roles'
+});
+
+// Relación directa entre Usuario y Rol
+Usuario.belongsTo(Rol, {
+  foreignKey: 'id_rol',
+  as: 'rol'
+});
+
+Rol.hasMany(Usuario, {
+  foreignKey: 'id_rol',
+  as: 'usuarios'
 });
 
 Usuario.belongsToMany(Permission, {

@@ -32,6 +32,19 @@ exports.obtenerUsuario = async (req, res) => {
     }
 }
 
+exports.obtenerUsuarioPorCorreo = async (req, res) => {
+    try {
+        const { correo } = req.params;
+        const usuario = await Usuario.findOne({ where: { correo } });
+        if (!usuario) {
+            return res.status(404).json({ message: 'Usuario no encontrado' });
+        }
+        return res.json(usuario);
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+}
+
 exports.crearUsuario = async (req, res) => {
     try {
         const { username, nombre, correo, clave, id_rol } = req.body;

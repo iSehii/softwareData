@@ -153,10 +153,18 @@ exports.crearCarroceria = (req, res) => {
 
                         if (analizarImagen.data.imperfecciones_detectadas > 0) {
                             try {
+                                const { coordenadas, id_resultado } = analizarImagen.data;
+                                
+                                // Validar que id_resultado exista antes de crear la imperfección
+                                if (!id_resultado) {
+                                    console.warn("No se recibió id_resultado del análisis de IA");
+                                    return;
+                                }
+                                
                                 const nuevaImperfeccion = await Imperfeccion.create({
                                     coordenadas: analizarImagen.data.coordenadas,
                                     id_severidad: null,
-                                    id_imagen_procesada: analizarImagen.data.id_resultado,
+                                    id_imagen_procesada: id_resultado,
                                     id_usuario: id_usuario
                                 });
                                 id_imperfecciones = nuevaImperfeccion.id;
@@ -309,6 +317,13 @@ exports.generarReporte = async (req, res) => {
                 if (analizarImagen?.data?.imperfecciones_detectadas > 0) {
                     try {
                         const { coordenadas, id_resultado } = analizarImagen.data;
+                        
+                        // Validar que id_resultado exista antes de crear la imperfección
+                        if (!id_resultado) {
+                            console.warn("No se recibió id_resultado del análisis de IA");
+                            return;
+                        }
+                        
                         const nuevaImperfeccion = await Imperfeccion.create({
                             coordenadas: coordenadas,
                             id_severidad: null,

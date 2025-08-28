@@ -112,24 +112,27 @@ exports.obtenerPermisosUsuario = async (req, res) => {
             return res.status(404).json({ error: 'Usuario no encontrado' });
         }
         
-        // Obtener permisos del rol
-        const permisosRol = await Permission.findAll({
-            include: [{
-                model: RolePermission,
-                where: { role_id: usuario.id_rol },
-                attributes: []
-            }],
-            attributes: ['id', 'module', 'action', 'descripcion']
-        });
-        
-        // Obtener overrides del usuario
-        const overrides = await UserPermission.findAll({
-            where: { usuario_id: id },
+        // Obtener permisos del rol usando las relaciones many-to-many
+        const rol = await Rol.findByPk(usuario.id_rol, {
             include: [{
                 model: Permission,
+                as: 'permissions',
                 attributes: ['id', 'module', 'action', 'descripcion']
             }]
         });
+        
+        const permisosRol = rol ? rol.permissions : [];
+        
+        // Obtener overrides del usuario usando las relaciones many-to-many
+        const usuarioConPermisos = await Usuario.findByPk(id, {
+            include: [{
+                model: Permission,
+                as: 'userPermissions',
+                attributes: ['id', 'module', 'action', 'descripcion']
+            }]
+        });
+        
+        const overrides = usuarioConPermisos ? usuarioConPermisos.userPermissions : [];
         
         // Procesar permisos efectivos
         const permisosEfectivos = [];
