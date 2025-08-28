@@ -495,51 +495,37 @@ exports.confirmarAcceso = async (req, res) => {
 exports.verificarCodigoActivacion = async (req, res) => {
     try {
         const { codigo, correo } = req.body;
-        console.log(req.body)
-        if (!codigo || !codigo.codigo) {
-            console.log("codigo no es requerido")
-            return res.status(400).json({ error: 'El código es requerido' });
+        
+        // Normalizar valores
+        let codigoValor = typeof codigo === 'object' ? codigo.codigo : codigo;
+        let correoValor = typeof codigo === 'object' ? codigo.correo : correo;
+        
+        // Validaciones iniciales
+        if (!codigoValor) {
+          return res.status(400).json({ error: 'El código es requerido' });
         }
-        if (!codigo.correo) {
-            if (!correo) {
-                return res.status(400).json({ error: 'El correo o usuario son requeridos' });
-            }
-            return res.status(400).json({ error: 'El correo o usuario son requeridos' });
+        if (!correoValor) {
+          return res.status(400).json({ error: 'El correo o usuario son requeridos' });
         }
-
+        
+        // Buscar usuario según correo/usuario
         let usuario;
-        if (codigo.correo) {
-            usuario = await Usuario.findOne({ where: { correo: codigo.correo } });
-            if (!usuario) {
-                return res.status(404).json({ error: 'Usuario no encontrado' });
-            }
-            if (usuario.verificado) {
-                return res.status(400).json({ error: 'La cuenta ya está activada' });
-            }
+        if (correoValor.includes('@')) {
+          usuario = await Usuario.findOne({ where: { correo: correoValor } });
         } else {
-            if(correo.includes('@')) {
-                usuario = await Usuario.findOne({ where: { correo } });
-                console.log(usuario+" usuario")
-                if (!usuario) {
-                    return res.status(404).json({ error: 'Usuario no encontrado' });
-                }
-                if (usuario.verificado) {
-                    return res.status(400).json({ error: 'La cuenta ya está activada' });
-                }
-            } else {
-                usuario = await Usuario.findOne({ where: { username: correo } });
-                if (!usuario) {
-                    return res.status(404).json({ error: 'Usuario no encontrado' });
-                }
-                if (usuario.verificado) {
-                    return res.status(400).json({ error: 'La cuenta ya está activada' });
-                }
-            }
+          usuario = await Usuario.findOne({ where: { username: correoValor } });
+        }
+        
+        if (!usuario) {
+          return res.status(404).json({ error: 'Usuario no encontrado' });
+        }
+        if (usuario.verificado) {
+          return res.status(400).json({ error: 'La cuenta ya está activada' });
         }
         // Buscar el código en la base de datos
         const codigoUsuario = await CodigoUsuario.findOne({
             where: { 
-                codigo: (codigo.codigo) ? codigo.codigo : codigo,
+                codigo: codigoValor,
                 tipo: 'ACTIVACION',
                 usado: false
             },
