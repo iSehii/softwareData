@@ -4,14 +4,37 @@ const { Usuario } = require('../models/usuarioModel');
 const { Permission } = require('../models/permissionModel');
 const { RolePermission } = require('../models/rolePermissionModel');
 const { UserPermission } = require('../models/userPermissionModel');
+const { CodigoUsuario } = require('../models/codigoUsuarioModel');
+const { sendEmail } = require('./correosController');
+const { Rol } = require('../models/rolModel');
 
 require("dotenv").config();
+
+// Función para generar código único de 6 dígitos
+async function generarCodigoUnico() {
+    let intentos = 0;
+    while (intentos < 100) {
+        // Generar código de 6 dígitos
+        const codigo = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        // Verificar que no exista en la base de datos
+        const codigoExistente = await CodigoUsuario.findOne({ 
+            where: { codigo: codigo } 
+        });
+        
+        if (!codigoExistente) {
+            return codigo;
+        }
+        intentos++;
+    }
+    throw new Error('No se pudo generar un código único después de 100 intentos');
+}
 
 // Función auxiliar para obtener permisos del rol (para login)
 async function obtenerPermisosPorRol(roleId) {
     try {
         if (!roleId) {
-            console.log('⚠️ [AUTH] Usuario sin rol asignado');
+            console.log('[AUTH] Usuario sin rol asignado');
             return [];
         }
         
@@ -30,11 +53,11 @@ async function obtenerPermisosPorRol(roleId) {
             descripcion: rp.Permission.descripcion
         }));
         
-        console.log(`🔑 [AUTH] Permisos del rol ${roleId}: ${permisos.length} permisos obtenidos`);
+        console.log(`[AUTH] Permisos del rol ${roleId}: ${permisos.length} permisos obtenidos`);
         
         return permisos;
     } catch (error) {
-        console.error('❌ [AUTH] Error al obtener permisos del rol:', error);
+        console.error('[AUTH] Error al obtener permisos del rol:', error);
         return [];
     }
 }
@@ -106,25 +129,999 @@ async function obtenerPermisosEfectivosUsuario(userId, roleId) {
 
 exports.register = async (req, res) => {
     try {
-        const { username, nombre, correo, clave, id_rol, id_usuario } = req.body;
+        const { username, nombre, correo, clave, id_rol, codigo } = req.body;
 
-        if (!username || !nombre || !correo || !clave || !id_rol || !id_usuario) {
+        if (!username || !nombre || !correo || !clave || !id_rol) {
             return res.status(400).json({ message: "Todos los campos son obligatorios" });
         }
 
+        // Verificar que el username no esté duplicado
+        const usuarioExistente = await Usuario.findOne({ where: { username } });
+        if (usuarioExistente) {
+            return res.status(400).json({ message: "El nombre de usuario ya existe" });
+        }
+
+        // Verificar que el correo no esté duplicado
+        const correoExistente = await Usuario.findOne({ where: { correo } });
+        if (correoExistente) {
+            return res.status(400).json({ message: "El correo ya está registrado" });
+        }
+
         const claveEncriptada = await bcrypt.hash(clave, 10);
+        const rolExiste = await Rol.findByPk(id_rol);
+        if (!rolExiste) {
+            return res.status(400).json({ message: "El rol no existe" });
+        }
+        if (rolExiste.codigo != codigo) {
+            return res.status(400).json({ message: "El código es inválido" });
+        }
+        // Crear usuario con estado pendiente
         const user = await Usuario.create({ 
-            username, 
-            nombre, 
-            correo, 
+            username: username.trim(),
+            nombre: nombre.trim(),
+            correo: correo.trim().toLowerCase(),
             clave: claveEncriptada, 
             id_rol, 
-            id_usuario 
+            verificado: false,
+            fecha_verificacion: null,
+            estado: true
         });
 
-        res.json({ message: "Usuario registrado exitosamente", user });
+        // Generar código de activación
+        const codigoActivacion = await generarCodigoUnico();
+        const nuevoCodigo = await CodigoUsuario.create({
+            codigo: codigoActivacion,
+            usuario_id: user.id,
+            tipo: 'ACTIVACION',
+            fecha_expiracion: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 horas
+            ip_creacion: req.ip || req.connection.remoteAddress
+        });
+
+        // Generar token de activación
+        const tokenActivacion = jwt.sign(
+            { 
+                id: user.id, 
+                username: user.username, 
+                correo: user.correo, 
+                id_rol: user.id_rol
+            },
+            process.env.JWT_SECRET,
+            { expiresIn: "24h" }
+        );
+
+        const enlaceActivacion = `https://lumet-inspection.com/registro/verificar?token=${tokenActivacion}`;
+
+        // Generar QR para el código
+        let qrCodeBuffer;
+        try {
+            const QRCode = require('qrcode');
+            qrCodeBuffer = await QRCode.toBuffer(codigoActivacion, {
+                width: 512,
+                height: 512,
+                margin: 2,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
+                }
+            });
+            console.log('QR generado exitosamente para código de activación');
+        } catch (qrError) {
+            console.warn('Error generando QR para código:', qrError);
+        }
+
+        // Email de bienvenida con código de activación
+        const emailHTML = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                * { box-sizing: border-box; }
+                body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    padding: 40px 20px;
+                }
+                .email-wrapper {
+                    width: 100%;
+                    max-width: 650px;
+                    margin: 0 auto;
+                }
+                .container {
+                    background: #ffffff;
+                    border-radius: 20px;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                }
+                .header {
+                    text-align: center;
+                    padding: 40px 30px 30px;
+                    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                }
+                .header img {
+                    max-width: 180px;
+                    height: auto;
+                }
+                .content {
+                    padding: 50px 40px;
+                    text-align: center;
+                }
+                .welcome-badge {
+                    display: inline-block;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 8px 20px;
+                    border-radius: 25px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    margin-bottom: 20px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .content h1 {
+                    font-size: 32px;
+                    font-weight: 700;
+                    color: #1a202c;
+                    margin: 0 0 25px 0;
+                }
+                .content p {
+                    font-size: 16px;
+                    color: #4a5568;
+                    line-height: 1.7;
+                    margin: 0 0 20px 0;
+                }
+                .codigo-activacion {
+                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                    border: 2px dashed #667eea;
+                    border-radius: 16px;
+                    padding: 30px;
+                    margin: 30px 0;
+                    text-align: center;
+                }
+                .codigo-numero {
+                    font-size: 48px;
+                    font-weight: bold;
+                    color: #667eea;
+                    letter-spacing: 8px;
+                    margin: 20px 0;
+                    font-family: 'Courier New', monospace;
+                }
+                .info-card {
+                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 25px;
+                    margin: 30px 0;
+                    text-align: left;
+                }
+                .info-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 15px;
+                    padding: 12px 0;
+                    border-bottom: 1px solid #e2e8f0;
+                }
+                .info-row:last-child {
+                    margin-bottom: 0;
+                    border-bottom: none;
+                }
+                .info-label {
+                    font-weight: 600;
+                    color: #2d3748;
+                    font-size: 14px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .info-value {
+                    font-weight: 600;
+                    color: #667eea;
+                    font-size: 16px;
+                }
+                .button {
+                    display: inline-block;
+                    padding: 16px 40px;
+                    margin: 35px 0 25px 0;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: #ffffff;
+                    text-decoration: none;
+                    border-radius: 50px;
+                    font-weight: 600;
+                    font-size: 16px;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .qr-section {
+                    margin-top: 40px;
+                    padding: 30px;
+                    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                    border-radius: 20px;
+                    border: 2px dashed #cbd5e0;
+                }
+                .qr-code img {
+                    width: 160px;
+                    height: 160px;
+                    border-radius: 16px;
+                    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+                    border: 4px solid #ffffff;
+                }
+                .footer {
+                    text-align: center;
+                    padding: 40px 30px;
+                    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                    color: #a0aec0;
+                }
+                .footer p {
+                    font-size: 14px;
+                    margin: 8px 0;
+                    line-height: 1.6;
+                }
+                .expiry-warning {
+                    background: #fff3cd;
+                    border: 1px solid #ffeaa7;
+                    border-radius: 8px;
+                    padding: 15px;
+                    margin: 20px 0;
+                    color: #856404;
+                    font-weight: 500;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="email-wrapper">
+                <div class="container">
+                    <div class="header">
+                        <img src="https://lumet-inspection.com/assets/Logo-DZtMWJpU.png" alt="Logo de la Empresa">
+                    </div>
+                    <div class="content">
+                        <div class="welcome-badge">Registro Exitoso</div>
+                        <h1>¡Hola, ${nombre}!</h1>
+                        <p>
+                            Tu cuenta ha sido registrada exitosamente. Para comenzar a usar la plataforma, 
+                            necesitas activar tu cuenta usando el código de activación que aparece a continuación.
+                        </p>
+
+                        <div class="codigo-activacion">
+                            <p><strong>Código de Activación:</strong></p>
+                            <div class="codigo-numero">${codigoActivacion}</div>
+                            <p>Ingresa este código en la aplicación para activar tu cuenta</p>
+                            <div class="expiry-warning">
+                                ⏰ Este código expira en 24 horas
+                            </div>
+                        </div>
+                        <div class="info-card">
+                            <p><strong>Información del usuario:</strong></p>
+                            <div class="info-row">
+                                <span class="info-label">Usuario: <strong style="color: #667eea;">${(username).toLowerCase()}</strong></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Correo: <strong style="color: #667eea;">${(correo).toLowerCase()}</strong></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Rol: <strong style="color: #667eea;">${(rolExiste.nombre).toLowerCase()}</strong></span>
+                            </div>
+                        </div>
+                        
+                        <a href="https://lumet-inspection.com/registro/verificar?correo=${correo}" class="button" style="text-decoration: none; color: white;">Activar cuenta</a>
+                        
+                        ${qrCodeBuffer ? `
+                        <div class="qr-section">
+                            <p>Código QR de activación</p>
+                            <div class="qr-code">
+                                <img src="cid:qrcode" alt="Código QR de activación">
+                            </div>
+                            <p>Escanea este QR para obtener el código de activación</p>
+                        </div>
+                        ` : ''}
+                    </div>
+                    <div class="footer">
+                        <p>&copy; ${new Date().getFullYear()} Lumet Inspection. Todos los derechos reservados.</p>
+                        <p>Si tienes problemas para activar tu cuenta, contacta a nuestro equipo de soporte.</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+
+        // Enviar email con código de activación
+        try {
+            const emailData = {
+                filename: 'qrcode.png',
+                content: qrCodeBuffer ? qrCodeBuffer.toString('base64') : '',
+                encoding: 'base64',
+                cid: 'qrcode'
+            };
+            
+            await sendEmail(
+                correo,
+                `¡Hola! ${nombre} - Activa tu cuenta`,
+                emailHTML,
+                qrCodeBuffer ? [emailData] : []
+            );
+            
+            console.log('Email de activación enviado exitosamente');
+        } catch (emailError) {
+            console.warn('Error enviando email de activación:', emailError);
+        }
+
+        res.json({ 
+            message: "Usuario registrado exitosamente. Revisa tu correo para activar tu cuenta.", 
+            user: {
+                id: user.id,
+                username: user.username,
+                nombre: user.nombre,
+                correo: user.correo,
+                verificado: user.verificado,
+                estado: user.estado
+            },
+            expira_en: nuevoCodigo.fecha_expiracion
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error en el registro", error });
+        console.error('Error en registro:', error);
+        res.status(500).json({ message: "Error en el registro", error: error.message });
+    }
+};
+
+exports.confirmarAcceso = async (req, res) => {
+    try {
+        const { codigo } = req.body;
+        if (!codigo) {
+            return res.status(400).json({ error: 'El código es requerido' });
+        }
+
+        const codigoRol = await Rol.findOne({ where: { codigo } });
+        if (!codigoRol) {
+            return res.status(404).json({ error: 'Código de rol no válido' });
+        }
+        return res.json({
+            message: 'Código de rol válido',
+            rol: codigoRol
+        });
+    } catch (error) {
+        console.error('Error en confirmar acceso:', error);
+        res.status(500).json({ error: "Error en el acceso", error: error.message });
+    }
+};
+
+// Función para verificar código de activación
+exports.verificarCodigoActivacion = async (req, res) => {
+    try {
+        const { codigo, correo } = req.body;
+        
+        if (!codigo) {
+            return res.status(400).json({ error: 'El código es requerido' });
+        }
+        if (!correo) {
+            return res.status(400).json({ error: 'El correo es requerido' });
+        }
+
+        if(correo.includes('@')) {
+            const usuario = await Usuario.findOne({ where: { correo } });
+            console.log(correo+" correo")
+            if (!usuario) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+            if (usuario.verificado) {
+                return res.status(400).json({ error: 'La cuenta ya está activada' });
+            }
+        } else {
+            const usuario = await Usuario.findOne({ where: { username: correo } });
+            if (!usuario) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+            if (usuario.verificado) {
+                return res.status(400).json({ error: 'La cuenta ya está activada' });
+            }
+        }
+        // Buscar el código en la base de datos
+        const codigoUsuario = await CodigoUsuario.findOne({
+            where: { 
+                codigo: codigo,
+                tipo: 'ACTIVACION',
+                usado: false
+            },
+            include: [{
+                model: Usuario,
+                as: 'usuario',
+                attributes: ['id', 'username', 'nombre', 'correo', 'verificado', 'estado']
+            }]
+        });
+
+        if (!codigoUsuario) {
+            return res.status(404).json({ error: 'Código de activación no válido' });
+        }
+
+        // Verificar si el código ha expirado
+        if (new Date() > codigoUsuario.fecha_expiracion) {
+            return res.status(400).json({ error: 'El código de activación ha expirado' });
+        }
+
+        // Si es el primer intento exitoso, marcar como usado y activar usuario
+        if (codigoUsuario.usado == true) {
+            return res.json({
+                message: 'Código válido, pero ya se ha usado anteriormente',
+            });
+        } else {
+            await codigoUsuario.update({ 
+                usado: true,
+                fecha_uso: new Date()
+            });
+            
+            // Activar el usuario 
+            await codigoUsuario.usuario.update({
+                verificado: true,
+                fecha_verificacion: new Date()
+            });
+            
+            // Email de confirmación de activación
+            const emailHTML = `
+            <!DOCTYPE html>
+            <html lang="es">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                <style>
+                    * { box-sizing: border-box; }
+                    body {
+                        margin: 0;
+                        padding: 0;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                        min-height: 100vh;
+                        padding: 40px 20px;
+                    }
+                    .email-wrapper {
+                        width: 100%;
+                        max-width: 650px;
+                        margin: 0 auto;
+                    }
+                    .container {
+                        background: #ffffff;
+                        border-radius: 20px;
+                        box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                        overflow: hidden;
+                    }
+                    .header {
+                        text-align: center;
+                        padding: 40px 30px 30px;
+                        background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                    }
+                    .header img {
+                        max-width: 180px;
+                        height: auto;
+                    }
+                    .content {
+                        padding: 50px 40px;
+                        text-align: center;
+                    }
+                    .success-badge {
+                        display: inline-block;
+                        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                        color: white;
+                        padding: 8px 20px;
+                        border-radius: 25px;
+                        font-size: 14px;
+                        font-weight: 500;
+                        margin-bottom: 20px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .content h1 {
+                        font-size: 32px;
+                        font-weight: 700;
+                        color: #1a202c;
+                        margin: 0 0 25px 0;
+                    }
+                    .content p {
+                        font-size: 16px;
+                        color: #4a5568;
+                        line-height: 1.7;
+                        margin: 0 0 20px 0;
+                    }
+                    .info-card {
+                        background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                        border: 1px solid #e2e8f0;
+                        border-radius: 16px;
+                        padding: 25px;
+                        margin: 30px 0;
+                        text-align: left;
+                    }
+                    .info-row {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 15px;
+                        padding: 12px 0;
+                        border-bottom: 1px solid #e2e8f0;
+                    }
+                    .info-row:last-child {
+                        margin-bottom: 0;
+                        border-bottom: none;
+                    }
+                    .info-label {
+                        font-weight: 600;
+                        color: #2d3748;
+                        font-size: 14px;
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .info-value {
+                        font-weight: 600;
+                        color: #667eea;
+                        font-size: 16px;
+                    }
+                    .button {
+                        display: inline-block;
+                        padding: 16px 40px;
+                        margin: 35px 0 25px 0;
+                        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+                        color: #ffffff;
+                        text-decoration: none;
+                        border-radius: 50px;
+                        font-weight: 600;
+                        font-size: 16px;
+                        transition: all 0.3s ease;
+                        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+                        text-transform: uppercase;
+                        letter-spacing: 0.5px;
+                    }
+                    .footer {
+                        text-align: center;
+                        padding: 40px 30px;
+                        background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                        color: #a0aec0;
+                    }
+                    .footer p {
+                        font-size: 14px;
+                        margin: 8px 0;
+                        line-height: 1.6;
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="email-wrapper">
+                    <div class="container">
+                        <div class="header">
+                            <img src="https://lumet-inspection.com/assets/Logo-DZtMWJpU.png" alt="Logo de la Empresa">
+                        </div>
+                        <div class="content">
+                            <div class="success-badge">Cuenta Activada</div>
+                            <h1>¡Felicidades, ${codigoUsuario.usuario.nombre}!</h1>
+                            <p>
+                                Tu cuenta ha sido activada exitosamente. Ya puedes iniciar sesión 
+                                y comenzar a usar la plataforma Lumet Inspection.
+                            </p>
+                            
+                            <div class="info-card">
+                                <div class="info-row">
+                                    <span class="info-label">Usuario</span>
+                                    <span class="info-value">${codigoUsuario.usuario.username}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Correo</span>
+                                    <span class="info-value">${codigoUsuario.usuario.correo}</span>
+                                </div>
+                                <div class="info-row">
+                                    <span class="info-label">Estado</span>
+                                    <span class="info-value">✅ Verificado</span>
+                                </div>
+                            </div>
+                            
+                            <a href="https://lumet-inspection.com/login" class="button" style="text-decoration: none; color: white;">Iniciar sesión</a>
+                        </div>
+                        <div class="footer">
+                            <p>&copy; ${new Date().getFullYear()} Lumet Inspection. Todos los derechos reservados.</p>
+                            <p>Si tienes problemas para iniciar sesión, contacta a nuestro equipo de soporte.</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+            `;
+
+            // Enviar email de confirmación
+            try {
+                await sendEmail(
+                    codigoUsuario.usuario.correo,
+                    `¡Cuenta activada! ${codigoUsuario.usuario.nombre} - Ya puedes iniciar sesión`,
+                    emailHTML
+                );
+                
+                console.log('Email de confirmación enviado exitosamente');
+            } catch (emailError) {
+                console.warn('Error enviando email de confirmación:', emailError);
+            }
+
+            // Obtener permisos del rol del usuario
+            const permisos = await obtenerPermisosPorRol(codigoUsuario.usuario.id_rol);
+
+            const token = jwt.sign(
+                { 
+                    id: codigoUsuario.usuario.id, 
+                    username: codigoUsuario.usuario.username, 
+                    correo: codigoUsuario.usuario.correo, 
+                    id_rol: codigoUsuario.usuario.id_rol,
+                    permissions: permisos
+                },
+                process.env.JWT_SECRET,
+                { expiresIn: "100h" }
+            );
+    
+            console.log(`[AUTH] Login exitoso para usuario ${codigoUsuario.usuario.username} con ${permisos.length} permisos del rol`);
+    
+            return res.json({ 
+                message: "Inicio de sesión exitoso", 
+                token: token, 
+                usuario: codigoUsuario.usuario,
+                permissions: permisos
+            }); 
+        } 
+
+    } catch (error) {
+        console.error('Error al verificar código de activación:', error);
+        return res.status(500).json({ error: error.message });
+    }
+};
+
+// Función para reenviar código de activación
+exports.reenviarCodigoActivacion = async (req, res) => {
+    try {
+        let { correo } = req.body;
+        if (!correo) {
+            correo = req.params.correo;
+        }
+        if (!correo) {
+            return res.status(400).json({ error: 'El correo es requerido' });
+        }
+
+        let usuario;
+        if (correo.includes('@')) {
+            usuario = await Usuario.findOne({ where: { correo } });
+            if (!usuario) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+        } else {
+            usuario = await Usuario.findOne({ where: { username: correo } });
+            if (!usuario) {
+                return res.status(404).json({ error: 'Usuario no encontrado' });
+            }
+        }
+
+        if (usuario.verificado) {
+            return res.status(400).json({ error: 'La cuenta ya está activada' });
+        }
+
+        // Verificar que el usuario esté activo
+        if (usuario.estado !== 'ACTIVO') {
+            return res.status(400).json({ error: 'La cuenta no está activa' });
+        }
+
+        // Invalidar códigos anteriores de activación para este usuario
+        await CodigoUsuario.update(
+            { usado: true },
+            { 
+                where: { 
+                    usuario_id: usuario.id,
+                    tipo: 'ACTIVACION',
+                    usado: false
+                }
+            }
+        );
+
+        // Generar nuevo código de activación
+        const nuevoCodigo = await generarCodigoUnico();
+        
+        // Crear nuevo código en la base de datos
+        const nuevoCodigoUsuario = await CodigoUsuario.create({
+            codigo: nuevoCodigo,
+            usuario_id: usuario.id,
+            tipo: 'ACTIVACION',
+            fecha_expiracion: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 horas
+            ip_creacion: req.ip || req.connection.remoteAddress
+        });
+
+        // Generar QR code para el nuevo código
+        let qrCodeBuffer;
+        try {
+            const QRCode = require('qrcode');
+            qrCodeBuffer = await QRCode.toBuffer(nuevoCodigo, {
+                width: 512,
+                height: 512,
+                margin: 2,
+                color: { dark: '#000000', light: '#FFFFFF' }
+            });
+            console.log('QR generado exitosamente para reenvío de código');
+        } catch (qrError) {
+            console.warn('Error generando QR para reenvío:', qrError);
+            qrCodeBuffer = null;
+        }
+
+        // Email de reenvío con nuevo código
+        const emailHTML = `
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+            <style>
+                * { box-sizing: border-box; }
+                body {
+                    margin: 0;
+                    padding: 0;
+                    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    min-height: 100vh;
+                    padding: 40px 20px;
+                }
+                .email-wrapper {
+                    width: 100%;
+                    max-width: 650px;
+                    margin: 0 auto;
+                }
+                .container {
+                    background: #ffffff;
+                    border-radius: 20px;
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                }
+                .header {
+                    text-align: center;
+                    padding: 40px 30px 30px;
+                    background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+                }
+                .header img {
+                    max-width: 180px;
+                    height: auto;
+                }
+                .content {
+                    padding: 50px 40px;
+                    text-align: center;
+                }
+                .info-badge {
+                    display: inline-block;
+                    background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+                    color: white;
+                    padding: 8px 20px;
+                    border-radius: 25px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    margin-bottom: 20px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .content h1 {
+                    font-size: 32px;
+                    font-weight: 700;
+                    color: #1a202c;
+                    margin: 0 0 25px 0;
+                }
+                .content p {
+                    font-size: 16px;
+                    color: #4a5568;
+                    line-height: 1.7;
+                    margin: 0 0 20px 0;
+                }
+                .code-section {
+                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                    border: 2px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 30px;
+                    margin: 30px 0;
+                    text-align: center;
+                }
+                .code-title {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #2d3748;
+                    margin-bottom: 20px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .code-display {
+                    font-size: 48px;
+                    font-weight: 700;
+                    color: #3b82f6;
+                    letter-spacing: 8px;
+                    margin: 20px 0;
+                    font-family: 'Courier New', monospace;
+                    background: white;
+                    padding: 20px;
+                    border-radius: 12px;
+                    border: 3px solid #e2e8f0;
+                }
+                .qr-section {
+                    margin: 30px 0;
+                    text-align: center;
+                }
+                .qr-section img {
+                    max-width: 200px;
+                    height: auto;
+                    border: 2px solid #e2e8f0;
+                    border-radius: 12px;
+                }
+                .info-card {
+                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    padding: 25px;
+                    margin: 30px 0;
+                    text-align: left;
+                }
+                .info-row {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 15px;
+                    padding: 12px 0;
+                    border-bottom: 1px solid #e2e8f0;
+                }
+                .info-row:last-child {
+                    margin-bottom: 0;
+                    border-bottom: none;
+                }
+                .info-label {
+                    font-weight: 600;
+                    color: #2d3748;
+                    font-size: 14px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+                .info-value {
+                    font-weight: 600;
+                    color: #667eea;
+                    font-size: 16px;
+                }
+                .warning {
+                    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+                    border: 1px solid #f59e0b;
+                    border-radius: 12px;
+                    padding: 20px;
+                    margin: 25px 0;
+                    text-align: center;
+                }
+                .warning h3 {
+                    color: #92400e;
+                    margin: 0 0 10px 0;
+                    font-size: 18px;
+                }
+                .warning p {
+                    color: #78350f;
+                    margin: 0;
+                    font-size: 14px;
+                }
+                .footer {
+                    text-align: center;
+                    padding: 40px 30px;
+                    background: linear-gradient(135deg, #2d3748 0%, #4a5568 100%);
+                    color: #a0aec0;
+                }
+                .footer p {
+                    font-size: 14px;
+                    margin: 8px 0;
+                    line-height: 1.6;
+                }
+            </style>
+        </head>
+        <body>
+            <div class="email-wrapper">
+                <div class="container">
+                    <div class="header">
+                        <img src="https://lumet-inspection.com/assets/Logo-DZtMWJpU.png" alt="Logo de la Empresa">
+                    </div>
+                    <div class="content">
+                        <div class="info-badge">Nuevo Código de Activación</div>
+                        <h1>¡Hola, ${usuario.nombre}!</h1>
+                        <p>
+                            Has solicitado un nuevo código de activación para tu cuenta. 
+                            Usa el código de 6 dígitos que aparece a continuación para activar tu cuenta.
+                        </p>
+                        
+                        <div class="code-section">
+                            <div class="code-title">Tu Código de Activación</div>
+                            <div class="code-display">${nuevoCodigo}</div>
+                            <p style="font-size: 14px; color: #6b7280; margin: 0;">
+                                Este código expira en 24 horas
+                            </p>
+                        </div>
+
+                        ${qrCodeBuffer ? `
+                        <div class="qr-section">
+                            <p style="font-size: 16px; color: #4a5568; margin-bottom: 15px;">
+                                <strong>Escanea este código QR:</strong>
+                            </p>
+                            <img src="cid:qrcode" alt="Código QR de activación">
+                        </div>
+                        ` : ''}
+                        
+                        <div class="warning">
+                            <h3>⚠️ Importante</h3>
+                            <p>
+                                Este código reemplaza cualquier código anterior. 
+                                Solo puedes usar este nuevo código una vez.
+                            </p>
+                        </div>
+                        
+                        <div class="info-card">
+                            <div class="info-row">
+                                <span class="info-label">Usuario</span>
+                                <span class="info-value">${usuario.username}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Correo</span>
+                                <span class="info-value">${usuario.correo}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="info-label">Estado</span>
+                                <span class="info-value">⏳ Pendiente de Activación</span>
+                            </div>
+                        </div>
+                        
+                        <p style="font-size: 14px; color: #6b7280;">
+                            Si no solicitaste este código, puedes ignorar este correo o contactar a soporte.
+                        </p>
+                    </div>
+                    <div class="footer">
+                        <p>&copy; ${new Date().getFullYear()} Lumet Inspection. Todos los derechos reservados.</p>
+                        <p>Si tienes problemas para activar tu cuenta, contacta a nuestro equipo de soporte.</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        `;
+
+        // Enviar email con nuevo código
+        try {
+            const emailData = {
+                filename: 'qrcode.png',
+                content: qrCodeBuffer ? qrCodeBuffer.toString('base64') : '',
+                encoding: 'base64',
+                cid: 'qrcode'
+            };
+            
+            await sendEmail(
+                usuario.correo,
+                `Nuevo código de activación - ${usuario.nombre}`,
+                emailHTML,
+                qrCodeBuffer ? [emailData] : []
+            );
+            
+            console.log(`[AUTH] Código de activación reenviado exitosamente a ${usuario.correo}`);
+            
+            res.json({
+                success: true,
+                message: 'Nuevo código de activación enviado exitosamente',
+                data: {
+                    usuario: usuario.username,
+                    correo: usuario.correo,
+                    expiracion: nuevoCodigoUsuario.fecha_expiracion
+                }
+            });
+            
+        } catch (emailError) {
+            console.error('Error enviando email de reenvío:', emailError);
+            
+            // Si falla el email, eliminar el código creado
+            await nuevoCodigoUsuario.destroy();
+            
+            return res.status(500).json({ 
+                error: 'Error al enviar el email. Intenta nuevamente.' 
+            });
+        }
+
+    } catch (error) {
+        console.error('Error al reenviar código de activación:', error);
+        return res.status(500).json({ error: error.message });
     }
 };
 
@@ -162,8 +1159,14 @@ exports.login = async (req, res) => {
             { expiresIn: "100h" }
         );
 
-        console.log(`✅ [AUTH] Login exitoso para usuario ${user.username} con ${permisos.length} permisos del rol`);
+        console.log(`[AUTH] Login exitoso para usuario ${user.username} con ${permisos.length} permisos del rol`);
 
+        console.log({
+            message: "Inicio de sesión exitoso", 
+            token: token, 
+            usuario: user,
+            permissions: permisos
+        });
         res.json({ 
             message: "Inicio de sesión exitoso", 
             token: token, 
@@ -173,6 +1176,30 @@ exports.login = async (req, res) => {
     } catch (error) {
         console.error('Error en login:', error);
         res.status(500).json({ message: "Error en el login", error: error.message });
+    }
+};
+
+exports.verificarUsuarioPorToken = async (token) => {
+    try {
+        if (!token) {
+            return false;
+        }
+
+        if (token.startsWith('Bearer ')) {
+            token = token.substring(7);
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await Usuario.findByPk(decoded.id);
+
+        if (!user) { 
+            return false;
+        }
+
+        return user;
+    } catch (error) {
+        console.error('Error al verificar usuario por token:', error);
+        return false;
     }
 };
 

@@ -30,6 +30,20 @@ const { databaseMySQL } = require('../config/SQL');
                 model: 'roles',
                 key: 'id'
             }
+        },
+        estado: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: true
+        },
+        verificado: {
+            type: DataTypes.BOOLEAN,
+            allowNull: false,
+            defaultValue: false
+        },
+        fecha_verificacion: {
+            type: DataTypes.DATE,
+            allowNull: true
         }
     }, {
         tableName: 'usuarios',

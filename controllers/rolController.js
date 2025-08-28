@@ -2,6 +2,26 @@ const { Rol } = require('../models/rolModel');
 const { Permission } = require('../models/permissionModel');
 const { RolePermission } = require('../models/rolePermissionModel');
 
+function generarCodigo() {
+    const digitos = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+    for (let i = digitos.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [digitos[i], digitos[j]] = [digitos[j], digitos[i]];
+    }
+    return digitos.slice(0, 6).join('');
+}
+
+async function generarCodigoUnico() {
+    let intentos = 0;
+    while (intentos < 200) {
+        const codigo = generarCodigo();
+        const existe = await Rol.findOne({ where: { codigo } });
+        if (!existe) return codigo;
+        intentos += 1;
+    }
+    throw new Error('No se pudo generar un código único para el rol');
+}
+
 // Obtener todos los roles
 exports.obtenerRoles = async (req, res) => {
     try {
@@ -40,10 +60,11 @@ exports.crearRol = async (req, res) => {
         if (!nombre) {
             return res.status(400).json({ error: 'El nombre del rol es requerido' });
         }
-        
+        const codigo = await generarCodigoUnico();
         const rol = await Rol.create({
             nombre: nombre.trim(),
-            descripcion: descripcion?.trim() || null
+            descripcion: descripcion?.trim() || null,
+            codigo: codigo
         });
         
         res.status(201).json(rol);
