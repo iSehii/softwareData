@@ -22,11 +22,12 @@ exports.obtenerPermisosRol = async (req, res) => {
     try {
         const { id } = req.params;
         
-        // Usar la consulta que funciona (igual que en authController)
+        // Obtener permisos del rol usando la relación correcta
         const rolePermissions = await RolePermission.findAll({
             where: { role_id: id },
             include: [{
                 model: Permission,
+                as: 'Permission',
                 attributes: ['id', 'module', 'action', 'descripcion']
             }],
             order: [['permission_id', 'ASC']]
@@ -149,7 +150,7 @@ exports.obtenerPermisosUsuario = async (req, res) => {
         
         // Aplicar overrides
         overrides.forEach(override => {
-            const permiso = override.Permission;
+            const permiso = override;
             const index = permisosEfectivos.findIndex(p => 
                 p.module === permiso.module && p.action === permiso.action
             );

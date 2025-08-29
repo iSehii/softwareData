@@ -11,16 +11,20 @@ const { RolePermission } = require('../models/rolePermissionModel');
 const { UserPermission } = require('../models/userPermissionModel');
 const { CodigoUsuario } = require('../models/codigoUsuarioModel');
 
-// Relaciones existentes
+// Relaciones existentes con alias consistentes
 Usuario.belongsTo(Rol, {
-  foreignKey: { name: 'id_rol', field: 'id_rol' }
+  foreignKey: { name: 'id_rol', field: 'id_rol' },
+  as: 'rol'
 });
 
 Reporte.belongsTo(Imperfeccion, {
-  foreignKey: { name: 'fk_reporte_imperfeccion', field: 'id_imperfecciones' }
+  foreignKey: { name: 'fk_reporte_imperfeccion', field: 'id_imperfecciones' },
+  as: 'imperfeccion'
 });
+
 Reporte.belongsTo(Carroceria, {
-  foreignKey: { name: 'fk_reporte_carroceria', field: 'id_carrocerias' }
+  foreignKey: { name: 'fk_reporte_carroceria', field: 'id_carrocerias' },
+  as: 'carroceria'
 });
 
 // Relaciones inversas para facilitar consultas
@@ -55,23 +59,28 @@ Imperfeccion.belongsToMany(Carroceria, {
 });
 
 Carroceria.belongsTo(Usuario, {
-  foreignKey: { name: 'id_usuario', field: 'id_usuario' }
+  foreignKey: { name: 'id_usuario', field: 'id_usuario' },
+  as: 'usuarioCarroceria'
 });
 
 Imperfeccion.belongsTo(Usuario, {
-  foreignKey: { name: 'id_usuario', field: 'id_usuario' }
+  foreignKey: { name: 'id_usuario', field: 'id_usuario' },
+  as: 'usuarioImperfeccion'
 });
 
 Imperfeccion.belongsTo(Severidad, {
-  foreignKey: { name: 'id_severidad', field: 'id_severidad' }
+  foreignKey: { name: 'id_severidad', field: 'id_severidad' },
+  as: 'severidad'
 });
 
 Reporte.belongsTo(Usuario, {
-  foreignKey: { name: 'id_usuario', field: 'id_usuario' }
+  foreignKey: { name: 'id_usuario', field: 'id_usuario' },
+  as: 'usuarioReporte'
 });
 
 Reporte.belongsTo(Prioridad, {
-  foreignKey: { name: 'id_prioridad', field: 'id_prioridad' }
+  foreignKey: { name: 'id_prioridad', field: 'id_prioridad' },
+  as: 'prioridad'
 });
 
 // Relaciones del sistema RBAC
@@ -89,15 +98,26 @@ Permission.belongsToMany(Rol, {
   as: 'roles'
 });
 
-// Relación directa entre Usuario y Rol
-Usuario.belongsTo(Rol, {
-  foreignKey: 'id_rol',
-  as: 'rol'
-});
-
+// Relación inversa para facilitar consultas
 Rol.hasMany(Usuario, {
   foreignKey: 'id_rol',
   as: 'usuarios'
+});
+
+// Relaciones hasMany para el chatbot
+Usuario.hasMany(Reporte, {
+  foreignKey: 'id_usuario',
+  as: 'reportes'
+});
+
+Usuario.hasMany(Carroceria, {
+  foreignKey: 'id_usuario',
+  as: 'carrocerias'
+});
+
+Usuario.hasMany(Imperfeccion, {
+  foreignKey: 'id_usuario',
+  as: 'imperfecciones'
 });
 
 Usuario.belongsToMany(Permission, {
