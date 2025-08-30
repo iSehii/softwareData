@@ -14,6 +14,7 @@ const imagenRoutes = require('./imagenRoutes');
 const feedbackRoutes = require('./feedbackRoutes');
 const permissionRoutes = require('./permissionRoutes');
 const kpiRoutes = require('./kpiRoutes');
+const chatbotRoutes = require('./chatbotRoutes');
 const { verificarToken } = require('../middlewares/authMiddleware');
 const authRoutes = require('./authRoutes');
 
@@ -29,6 +30,7 @@ router.use('/carrocerias', verificarToken, carroceriaRoutes);
 router.use('/imperfecciones', verificarToken, imperfeccionRoutes);
 router.use('/auth', authRoutes);
 router.use('/reportes', verificarToken, reporteRoutes);
-router.use('/kpis', kpiRoutes);
+router.use('/kpis', verificarToken, kpiRoutes);
+router.use('/chatbot', verificarToken, chatbotRoutes);
 
 module.exports = router;
