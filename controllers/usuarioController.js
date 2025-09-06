@@ -460,6 +460,7 @@ exports.actualizarUsuario = async (req, res) => {
     try {
         const { id } = req.params;
         const { username, nombre, correo, clave, id_rol, id_usuario } = req.body;
+        const hashedPassword = await bcrypt.hash(clave, 10);
 
         const usuario = await Usuario.findByPk(id);
         if (!usuario) {
@@ -470,7 +471,7 @@ exports.actualizarUsuario = async (req, res) => {
             username,
             nombre,
             correo,
-            clave,
+            clave: hashedPassword,
             id_rol,
             id_usuario
         });
