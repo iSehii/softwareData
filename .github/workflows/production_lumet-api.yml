@@ -15,10 +15,13 @@ jobs:
     outputs:
       quality_gate: ${{ steps.quality-gate.outputs.status }}
 
+    env:
+      ENFORCE_QG: ${{ secrets.ENFORCE_QUALITY_GATE }}  # <- solución
+
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Required for SonarCloud
+          fetch-depth: 0
 
       - name: Set up Node.js version
         uses: actions/setup-node@v3
@@ -28,7 +31,9 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # ========== SONARCLOUD SCAN ==========
+      # ============================
+      #         SONARCLOUD
+      # ============================
       - name: Set up Java
         uses: actions/setup-java@v4
         with:
@@ -59,8 +64,8 @@ jobs:
         timeout-minutes: 5
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        if: ${{ secrets.ENFORCE_QUALITY_GATE == 'true' }}
-      # =====================================
+        if: ${{ env.ENFORCE_QG == 'true' }}  # <- FIX correcto
+      # ============================
 
       - name: Build project
         run: npm run build --if-present
@@ -68,7 +73,7 @@ jobs:
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
 
-      - name: Upload artifact for deployment job
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: node-app
@@ -77,6 +82,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
+
     if: |
       secrets.ALLOW_DEPLOY == 'true' &&
       (
@@ -85,13 +91,11 @@ jobs:
       )
 
     steps:
-      - name: Download artifact from build job
-        uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v4
         with:
           name: node-app
 
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
+      - run: unzip release.zip
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
