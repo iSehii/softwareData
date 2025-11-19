@@ -1,7 +1,4 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-
-name: Build and deploy Node.js app to Azure Web App - lumet
+name: Build, Scan and Deploy to Azure Web App - lumet
 
 on:
   push:
@@ -13,20 +10,60 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
+
+    outputs:
+      quality_gate: ${{ steps.quality-gate.outputs.status }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for SonarCloud
 
       - name: Set up Node.js version
         uses: actions/setup-node@v3
         with:
           node-version: '20.x'
 
-      - name: npm install, build, and test
-        run: |
-          npm install
-          npm run build --if-present
+      - name: Install dependencies
+        run: npm install
+
+      # ========== SONARCLOUD SCAN ==========
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache SonarCloud packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Run SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=${{ secrets.SONAR_PROJECT_KEY }}
+            -Dsonar.organization=${{ secrets.SONAR_ORG }}
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.sources=.
+
+      - name: Check Sonar Quality Gate
+        id: quality-gate
+        uses: SonarSource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        if: ${{ secrets.ENFORCE_QUALITY_GATE == 'true' }}
+      # =====================================
+
+      - name: Build project
+        run: npm run build --if-present
 
       - name: Zip artifact for deployment
         run: zip release.zip ./* -r
@@ -40,8 +77,13 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    
-    
+    if: |
+      secrets.ALLOW_DEPLOY == 'true' &&
+      (
+        secrets.ENFORCE_QUALITY_GATE != 'true' ||
+        needs.build.outputs.quality_gate == 'PASSED'
+      )
+
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
@@ -50,9 +92,8 @@ jobs:
 
       - name: Unzip artifact for deployment
         run: unzip release.zip
-      
-      - name: 'Deploy to Azure Web App'
-        id: deploy-to-webapp
+
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
           app-name: 'lumet-api'
