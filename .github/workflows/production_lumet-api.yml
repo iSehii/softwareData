@@ -82,7 +82,10 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    if: ${{ secrets.ALLOW_DEPLOY == 'true' && (secrets.ENFORCE_QUALITY_GATE != 'true' || needs.build.outputs.quality_gate == 'PASSED') }}
+    env:
+      ALLOW_DEPLOY: ${{ secrets.ALLOW_DEPLOY }}
+      ENFORCE_QUALITY_GATE: ${{ secrets.ENFORCE_QUALITY_GATE }}
+    if: ${{ env.ALLOW_DEPLOY == 'true' && (env.ENFORCE_QUALITY_GATE != 'true' || needs.build.outputs.quality_gate == 'PASSED') }}
     steps:
       - name: Download artifact from build job
         uses: actions/download-artifact@v4
