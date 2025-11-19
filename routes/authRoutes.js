@@ -10,5 +10,5 @@ router.post('/refresh', refreshToken);
 router.post('/verificar-codigo', verificarCodigoActivacion);
 router.post('/reenviar-codigo', reenviarCodigoActivacion);
 router.post('/access-code', confirmarAcceso);
-//TEST SONAR CLOUD
+//TEST SONAR CLOUDs
 module.exports = router;
