@@ -14,7 +14,9 @@ const expressListEndpoints = require('express-list-endpoints');
 
 app.use(cors());
 app.use(morgan('dev'));
-app.use(express.json());
+// Aumentar límite de JSON para permitir payloads más grandes (250MB)
+app.use(express.json({ limit: '250mb' }));
+app.use(express.urlencoded({ limit: '250mb', extended: true }));
 
 app.use('/', require('./routes/index'));
 

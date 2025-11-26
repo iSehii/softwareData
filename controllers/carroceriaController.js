@@ -2,11 +2,19 @@ const { Carroceria } = require('../models/carroceriaModel');
 const { Imperfeccion } = require('../models/imperfeccionModel'); // Ajusta las importaciones de tus modelos
 const Imagen = require('../models/imagenesModel');
 const { Reporte } = require('../models/reporteModel');
+const ImagenesAnalizadas = require('../models/ImagenesAnalizadasModel');
+const { subirImagen: subirImagenS3 } = require('../services/s3Service');
 
 const multer = require("multer");
 const axios = require('axios')
 const storage = multer.memoryStorage();
-const upload = multer({ storage }).single("id_imagen");
+// Configurar límites: permitir imágenes de hasta 250MB (S3 puede manejar mucho más)
+const upload = multer({ 
+    storage,
+    limits: {
+        fileSize: 250 * 1024 * 1024 // 250MB en bytes
+    }
+}).single("id_imagen");
 
 
 exports.obtenerCarrocerias = async (req, res) => {
@@ -92,8 +100,15 @@ exports.crearCarroceria = (req, res) => {
 
             if (req.file) {
                 try {
+                    // Subir imagen a S3
+                    const { key } = await subirImagenS3(
+                        req.file.buffer,
+                        req.file.mimetype
+                    );
+
+                    // Guardar referencia en MongoDB
                     const nuevaImagen = new Imagen({
-                        imagen: req.file.buffer,
+                        s3_key: key,
                         contentType: req.file.mimetype,
                     });
                     const imagenGuardada = await nuevaImagen.save();
@@ -144,8 +159,15 @@ exports.crearCarroceria = (req, res) => {
 
                 setImmediate(async () => {
                     try {
+                        // Obtener s3_key de la imagen para enviarla a la API
+                        const imagenDoc = await Imagen.findById(id_imagen);
+                        if (!imagenDoc || !imagenDoc.s3_key) {
+                            console.error("No se encontró la imagen o su s3_key");
+                            return;
+                        }
+
                         const analizarImagen = await axios.post(`${ia_api}/analizar`, {
-                            id: id_imagen,
+                            s3_key: imagenDoc.s3_key,
                             color_referencia: color
                         });
 
@@ -153,18 +175,31 @@ exports.crearCarroceria = (req, res) => {
 
                         if (analizarImagen.data.imperfecciones_detectadas > 0) {
                             try {
-                                const { coordenadas, id_resultado } = analizarImagen.data;
+                                const { coordenadas, id_resultado, s3_key, color_dominante, detalles } = analizarImagen.data;
                                 
-                                // Validar que id_resultado exista antes de crear la imperfección
-                                if (!id_resultado) {
-                                    console.warn("No se recibió id_resultado del análisis de IA");
+                                // Validar que id_resultado (s3_key) exista antes de crear la imperfección
+                                if (!id_resultado && !s3_key) {
+                                    console.warn("No se recibió id_resultado/s3_key del análisis de IA");
                                     return;
                                 }
+
+                                const resultado_s3_key = s3_key || id_resultado;
                                 
+                                // Guardar imagen analizada en MongoDB
+                                const nuevaImagenAnalizada = new ImagenesAnalizadas({
+                                    imagen_original_s3_key: imagenDoc.s3_key,
+                                    imagen_resultado_s3_key: resultado_s3_key,
+                                    color_dominante: color_dominante || color,
+                                    imperfecciones: detalles || coordenadas || [],
+                                    contentType: "image/png"
+                                });
+                                const imagenAnalizadaGuardada = await nuevaImagenAnalizada.save();
+                                
+                                // Crear imperfección con referencia a la imagen analizada
                                 const nuevaImperfeccion = await Imperfeccion.create({
-                                    coordenadas: analizarImagen.data.coordenadas,
+                                    coordenadas: JSON.stringify(coordenadas || detalles || []),
                                     id_severidad: null,
-                                    id_imagen_procesada: id_resultado,
+                                    id_imagen_procesada: imagenAnalizadaGuardada._id.toString(),
                                     id_usuario: id_usuario
                                 });
                                 id_imperfecciones = nuevaImperfeccion.id;
@@ -219,12 +254,38 @@ exports.actualizarCarroceria = (req, res) => {
 
             if (req.file) {
                 try {
-                    const nuevaImagen = new Imagen({
-                        imagen: req.file.buffer,
-                        contentType: req.file.mimetype,
-                    });
-                    await nuevaImagen.save();
-                    id_imagen = nuevaImagen._id.toString();
+                    // Si hay una imagen anterior, obtener su s3_key para reemplazarla
+                    let s3_key_existente = null;
+                    if (id_imagen) {
+                        const imagenAnterior = await Imagen.findById(id_imagen);
+                        if (imagenAnterior) {
+                            s3_key_existente = imagenAnterior.s3_key;
+                        }
+                    }
+
+                    // Subir nueva imagen a S3 (reutilizando la clave si existe)
+                    const { key } = await subirImagenS3(
+                        req.file.buffer,
+                        req.file.mimetype,
+                        s3_key_existente
+                    );
+
+                    // Si existe imagen anterior, actualizarla; si no, crear nueva
+                    if (id_imagen) {
+                        const imagenAnterior = await Imagen.findById(id_imagen);
+                        if (imagenAnterior) {
+                            imagenAnterior.s3_key = key;
+                            imagenAnterior.contentType = req.file.mimetype;
+                            await imagenAnterior.save();
+                        }
+                    } else {
+                        const nuevaImagen = new Imagen({
+                            s3_key: key,
+                            contentType: req.file.mimetype,
+                        });
+                        await nuevaImagen.save();
+                        id_imagen = nuevaImagen._id.toString();
+                    }
                     console.log("Imagen actualizada:", id_imagen);
                 } catch (error) {
                     console.log(error);
@@ -309,26 +370,45 @@ exports.generarReporte = async (req, res) => {
 
         setImmediate(async () => {
             try {
+                // Obtener s3_key de la imagen para enviarla a la API
+                const imagenDoc = await Imagen.findById(carroceria.id_imagen);
+                if (!imagenDoc || !imagenDoc.s3_key) {
+                    console.error("No se encontró la imagen o su s3_key");
+                    return;
+                }
+
                 const analizarImagen = await axios.post(`${ia_api}/analizar`, {
-                    id: carroceria.id_imagen,
+                    s3_key: imagenDoc.s3_key,
                     color_referencia: carroceria.color
                 });
 
                 if (analizarImagen?.data?.imperfecciones_detectadas > 0) {
                     try {
-                        const { coordenadas, id_resultado } = analizarImagen.data;
+                        const { coordenadas, id_resultado, s3_key, color_dominante, detalles } = analizarImagen.data;
                         
-                        // Validar que id_resultado exista antes de crear la imperfección
-                        if (!id_resultado) {
-                            console.warn("No se recibió id_resultado del análisis de IA");
+                        // Validar que id_resultado (s3_key) exista antes de crear la imperfección
+                        if (!id_resultado && !s3_key) {
+                            console.warn("No se recibió id_resultado/s3_key del análisis de IA");
                             return;
                         }
+
+                        const resultado_s3_key = s3_key || id_resultado;
                         
+                        // Guardar imagen analizada en MongoDB
+                        const nuevaImagenAnalizada = new ImagenesAnalizadas({
+                            imagen_original_s3_key: imagenDoc.s3_key,
+                            imagen_resultado_s3_key: resultado_s3_key,
+                            color_dominante: color_dominante || carroceria.color,
+                            imperfecciones: detalles || coordenadas || [],
+                            contentType: "image/png"
+                        });
+                        const imagenAnalizadaGuardada = await nuevaImagenAnalizada.save();
+                        
+                        // Crear imperfección con referencia a la imagen analizada
                         const nuevaImperfeccion = await Imperfeccion.create({
-                            coordenadas: coordenadas,
+                            coordenadas: JSON.stringify(coordenadas || detalles || []),
                             id_severidad: null,
-                            status: 'Procesando',
-                            id_imagen_procesada: id_resultado,
+                            id_imagen_procesada: imagenAnalizadaGuardada._id.toString(),
                             id_usuario: id_usuario
                         });
                         

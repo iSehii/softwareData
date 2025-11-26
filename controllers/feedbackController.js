@@ -2,7 +2,13 @@ const Feedback = require('../models/feedbackModel');
 const multer = require("multer");
 
 const storage = multer.memoryStorage();
-const upload = multer({ storage }).single("imagen");
+// Configurar límites: permitir imágenes de hasta 250MB (S3 puede manejar mucho más)
+const upload = multer({ 
+    storage,
+    limits: {
+        fileSize: 250 * 1024 * 1024 // 250MB en bytes
+    }
+}).single("imagen");
 
 // Middleware de logging para todas las requests
 const logRequest = (req, res, next) => {

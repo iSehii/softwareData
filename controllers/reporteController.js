@@ -2,6 +2,8 @@ const Imagen = require("../models/imagenesModel");
 const { Imperfeccion } = require('../models/imperfeccionModel'); 
 const ImagenesAnalizadas = require("../models/ImagenesAnalizadasModel");
 const { Reporte } = require('../models/reporteModel');
+const { Carroceria } = require('../models/carroceriaModel');
+const axios = require('axios');
 
 const ia_api = process.env.IA_API;
 
@@ -33,7 +35,7 @@ exports.obtenerReporte = async (req, res) => {
             if (imperfecciones && imperfecciones.id_imagen_procesada) {
                 imagen_analizada = await ImagenesAnalizadas
                     .findById(imperfecciones.id_imagen_procesada)
-                    .select('-imagen_resultado'); // Excluir el binario de la imagen procesada
+                    .select('-imagen_resultado_s3_key'); // Excluir el s3_key de la imagen procesada
             }
         }
 
@@ -68,31 +70,48 @@ exports.crearReporte = async (req, res) => {
         }
 
         const imagen = await Imagen.findById(carroceria.id_imagen);
-        if (!imagen) {
+        if (!imagen || !imagen.s3_key) {
             return res.status(400).json({ error: "No se encontró imagen, por favor agregue una imagen para generar el reporte." });
         }
 
         const analizarImagen = await axios.post(`${ia_api}/analizar`, {
-            id: carroceria.id_imagen,
+            s3_key: imagen.s3_key,
             color_referencia: color_referencia
         });
 
         let id_imperfecciones = null;
 
-        if (analizarImagen?.data?.ok) {
-            if (analizarImagen.data.imperfecciones_detectadas !== 0) {
-                try {
-                    const { coordenadas, id_resultado } = analizarImagen.data;
-                    const nuevaImperfeccion = await Imperfeccion.create({
-                        coordenadas: coordenadas,
-                        id_severidad: null,
-                        id_imagen_procesada: id_resultado,
-                        id_usuario: null
-                    });
-                    id_imperfecciones = nuevaImperfeccion.id;
-                } catch (error) {
-                    return res.status(500).json({ error: error.message });
+        if (analizarImagen?.data?.imperfecciones_detectadas > 0) {
+            try {
+                const { coordenadas, id_resultado, s3_key, color_dominante, detalles } = analizarImagen.data;
+                
+                // Validar que id_resultado (s3_key) exista
+                if (!id_resultado && !s3_key) {
+                    return res.status(500).json({ error: "No se recibió id_resultado/s3_key del análisis de IA" });
                 }
+
+                const resultado_s3_key = s3_key || id_resultado;
+                
+                // Guardar imagen analizada en MongoDB
+                const nuevaImagenAnalizada = new ImagenesAnalizadas({
+                    imagen_original_s3_key: imagen.s3_key,
+                    imagen_resultado_s3_key: resultado_s3_key,
+                    color_dominante: color_dominante || color_referencia,
+                    imperfecciones: detalles || coordenadas || [],
+                    contentType: "image/png"
+                });
+                const imagenAnalizadaGuardada = await nuevaImagenAnalizada.save();
+                
+                // Crear imperfección con referencia a la imagen analizada
+                const nuevaImperfeccion = await Imperfeccion.create({
+                    coordenadas: JSON.stringify(coordenadas || detalles || []),
+                    id_severidad: null,
+                    id_imagen_procesada: imagenAnalizadaGuardada._id.toString(),
+                    id_usuario: id_usuario || null
+                });
+                id_imperfecciones = nuevaImperfeccion.id;
+            } catch (error) {
+                return res.status(500).json({ error: error.message });
             }
         }
 

@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 
 const imagenSchema = new mongoose.Schema({
-  imagen: { type: Buffer, required: true }, 
+  s3_key: { type: String, required: true }, // Clave de la imagen en S3
   contentType: { type: String, required: true }, 
 });
 

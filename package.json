@@ -36,6 +36,8 @@
     "nodemailer": "^7.0.5",
     "qrcode": "^1.5.4",
     "qrcode-with-logos": "^1.1.1",
-    "sequelize": "^6.37.6"
+    "sequelize": "^6.37.6",
+    "@aws-sdk/client-s3": "^3.700.0",
+    "@aws-sdk/s3-request-presigner": "^3.700.0"
   }
 }

@@ -2,9 +2,8 @@ const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
 
 const ImagenAnalizadaSchema = new Schema({
-  imagen_original_id: {
-    type: Schema.Types.ObjectId,
-    ref: 'Imagens',
+  imagen_original_s3_key: {
+    type: String,
     required: true
   },
   color_dominante: {
@@ -12,17 +11,25 @@ const ImagenAnalizadaSchema = new Schema({
     required: true
   },
   imperfecciones: [{
+    label: {
+      type: String,
+      required: false
+    },
+    bbox: {
+      type: [Number],
+      required: false
+    },
     x: {
       type: Number,
-      required: true
+      required: false
     },
     y: {
       type: Number,
-      required: true
+      required: false
     }
   }],
-  imagen_resultado: {
-    type: Buffer,
+  imagen_resultado_s3_key: {
+    type: String,
     required: true
   },
   contentType: {
