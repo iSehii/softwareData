@@ -178,12 +178,12 @@ exports.crearCarroceria = (req, res) => {
                                 const { coordenadas, id_resultado, s3_key, color_referencia, detalles } = analizarImagen.data;
                                 
                                 // Validar que id_resultado (s3_key) exista antes de crear la imperfección
-                                if (!id_resultado && !s3_key) {
+                                if (!s3_key) {
                                     console.warn("No se recibió id_resultado/s3_key del análisis de IA");
                                     return;
                                 }
 
-                                const resultado_s3_key = s3_key || id_resultado;
+                                const resultado_s3_key = s3_key;
                                 
                                 // Guardar imagen analizada en MongoDB
                                 const nuevaImagenAnalizada = new ImagenesAnalizadas({
@@ -389,15 +389,15 @@ exports.generarReporte = async (req, res) => {
 
                 if (analizarImagen?.data?.imperfecciones_detectadas > 0) {
                     try {
-                        const { coordenadas, id_resultado, s3_key, color_dominante, detalles } = analizarImagen.data;
+                        const { coordenadas, s3_key, color_dominante, detalles } = analizarImagen.data;
                         
-                        // Validar que id_resultado (s3_key) exista antes de crear la imperfección
-                        if (!id_resultado && !s3_key) {
-                            console.warn("No se recibió id_resultado/s3_key del análisis de IA");
+                        // Validar que  (s3_key) exista antes de crear la imperfección
+                        if ( !s3_key) {
+                            console.warn("No se recibió /s3_key del análisis de IA");
                             return;
                         }
 
-                        const resultado_s3_key = s3_key || id_resultado;
+                        const resultado_s3_key = s3_key;
                         
                         // Guardar imagen analizada en MongoDB
                         const nuevaImagenAnalizada = new ImagenesAnalizadas({
