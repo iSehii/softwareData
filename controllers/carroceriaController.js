@@ -175,7 +175,7 @@ exports.crearCarroceria = (req, res) => {
 
                         if (analizarImagen.data.imperfecciones_detectadas > 0) {
                             try {
-                                const { coordenadas, id_resultado, s3_key, color_dominante, detalles } = analizarImagen.data;
+                                const { coordenadas, id_resultado, s3_key, color_referencia, detalles } = analizarImagen.data;
                                 
                                 // Validar que id_resultado (s3_key) exista antes de crear la imperfección
                                 if (!id_resultado && !s3_key) {
@@ -189,7 +189,7 @@ exports.crearCarroceria = (req, res) => {
                                 const nuevaImagenAnalizada = new ImagenesAnalizadas({
                                     imagen_original_s3_key: imagenDoc.s3_key,
                                     imagen_resultado_s3_key: resultado_s3_key,
-                                    color_dominante: color_dominante || color,
+                                    color_dominante: color_referencia || color,
                                     imperfecciones: detalles || coordenadas || [],
                                     contentType: "image/png"
                                 });
@@ -199,7 +199,7 @@ exports.crearCarroceria = (req, res) => {
                                 const nuevaImperfeccion = await Imperfeccion.create({
                                     coordenadas: JSON.stringify(coordenadas || detalles || []),
                                     id_severidad: null,
-                                    id_imagen_procesada: imagenAnalizadaGuardada._id.toString(),
+                                    id_imagen_procesada: s3_key,
                                     id_usuario: id_usuario
                                 });
                                 id_imperfecciones = nuevaImperfeccion.id;
@@ -208,12 +208,17 @@ exports.crearCarroceria = (req, res) => {
                                 // Actualizar el reporte con la imperfección y marcar como Completado
                                 await nuevoReporte.update({
                                     id_imperfecciones: id_imperfecciones,
-                                    status: 'Completado'
+                                    status: status || 'Completado'
                                 });
                             } catch (errorImperfeccion) {
                                 console.error("Error al guardar la imperfección:", errorImperfeccion);
                             }
+                        } else {
+                            await nuevoReporte.update({
+                                status: 'Completado sin imperfecciones'
+                            });
                         }
+
 
                         console.log("Reporte actualizado exitosamente para la carrocería:", nuevaCarroceria.id);
                     } catch (errorReporte) {
