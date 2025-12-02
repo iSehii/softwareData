@@ -423,7 +423,12 @@ exports.generarReporte = async (req, res) => {
                     } catch (errorImperfeccion) {
                         console.error("Error al guardar la imperfección:", errorImperfeccion);
                     }
+                } else {
+                    await nuevoReporte.update({
+                        status: 'Completado sin imperfecciones'
+                    });
                 }
+                
             } catch (error) {
                 console.error("Error en análisis de IA:", error);
             }
