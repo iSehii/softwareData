@@ -95,19 +95,21 @@ const obtenerDatosPorId = async (req, res) => {
 
 const obtenerImagenAnalizadaPorId = async (req, res) => {
   try {
-    const { buffer, contentType } = await obtenerImagen("imagenes_analizadas/"+req.params.id+".png");
-    if (!buffer) return res.status(404).json({ error: "Imagen no encontrada" });
+    const imagen = await ImagenesAnalizadas.findById(req.params.id);
+    if (!imagen) return res.status(404).json({ error: "Imagen no encontrada" });
+
+    // Obtener imagen de S3
+    const { buffer, contentType } = await obtenerImagen("imagenes_analizadas/"+imagen.imagen_resultado_s3_key+".png");
     const base64 = buffer.toString("base64");
     const dataUri = `data:${contentType || imagen.contentType};base64,${base64}`;
 
     res.json({
-      _id: req.params.id,
-      contentType: contentType,
+      _id: imagen._id,
+      contentType: contentType || imagen.contentType,
       imagenBase64: dataUri,
-      s3_key: "imagenes_analizadas/"+req.params.id+".png",
+      s3_key: imagen.imagen_resultado_s3_key,
     });
   } catch (error) {
-    console.log(error);
     res.status(500).json({ error: "Error al buscar la imagen" });
   }
 };

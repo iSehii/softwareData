@@ -178,12 +178,12 @@ exports.crearCarroceria = (req, res) => {
                                 const { coordenadas, id_resultado, s3_key, color_referencia, detalles } = analizarImagen.data;
                                 
                                 // Validar que id_resultado (s3_key) exista antes de crear la imperfección
-                                if (!s3_key) {
+                                if (!id_resultado && !s3_key) {
                                     console.warn("No se recibió id_resultado/s3_key del análisis de IA");
                                     return;
                                 }
 
-                                const resultado_s3_key = s3_key;
+                                const resultado_s3_key = s3_key || id_resultado;
                                 
                                 // Guardar imagen analizada en MongoDB
                                 const nuevaImagenAnalizada = new ImagenesAnalizadas({
@@ -389,15 +389,15 @@ exports.generarReporte = async (req, res) => {
 
                 if (analizarImagen?.data?.imperfecciones_detectadas > 0) {
                     try {
-                        const { coordenadas, s3_key, color_dominante, detalles } = analizarImagen.data;
+                        const { coordenadas, id_resultado, s3_key, color_dominante, detalles } = analizarImagen.data;
                         
-                        // Validar que  (s3_key) exista antes de crear la imperfección
-                        if ( !s3_key) {
-                            console.warn("No se recibió /s3_key del análisis de IA");
+                        // Validar que id_resultado (s3_key) exista antes de crear la imperfección
+                        if (!id_resultado && !s3_key) {
+                            console.warn("No se recibió id_resultado/s3_key del análisis de IA");
                             return;
                         }
 
-                        const resultado_s3_key = s3_key;
+                        const resultado_s3_key = s3_key || id_resultado;
                         
                         // Guardar imagen analizada en MongoDB
                         const nuevaImagenAnalizada = new ImagenesAnalizadas({
@@ -413,7 +413,7 @@ exports.generarReporte = async (req, res) => {
                         const nuevaImperfeccion = await Imperfeccion.create({
                             coordenadas: JSON.stringify(coordenadas || detalles || []),
                             id_severidad: null,
-                            id_imagen_procesada: s3_key,
+                            id_imagen_procesada: imagenAnalizadaGuardada._id.toString(),
                             id_usuario: id_usuario
                         });
                         
@@ -423,8 +423,6 @@ exports.generarReporte = async (req, res) => {
                     } catch (errorImperfeccion) {
                         console.error("Error al guardar la imperfección:", errorImperfeccion);
                     }
-                } else {
-                    await nuevoReporte.update({ status: 'Completado sin imperfecciones' });
                 }
             } catch (error) {
                 console.error("Error en análisis de IA:", error);
