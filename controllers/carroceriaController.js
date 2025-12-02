@@ -413,7 +413,7 @@ exports.generarReporte = async (req, res) => {
                         const nuevaImperfeccion = await Imperfeccion.create({
                             coordenadas: JSON.stringify(coordenadas || detalles || []),
                             id_severidad: null,
-                            id_imagen_procesada: imagenAnalizadaGuardada._id.toString(),
+                            id_imagen_procesada: s3_key,
                             id_usuario: id_usuario
                         });
                         
@@ -423,6 +423,8 @@ exports.generarReporte = async (req, res) => {
                     } catch (errorImperfeccion) {
                         console.error("Error al guardar la imperfección:", errorImperfeccion);
                     }
+                } else {
+                    await nuevoReporte.update({ status: 'Completado sin imperfecciones' });
                 }
             } catch (error) {
                 console.error("Error en análisis de IA:", error);
