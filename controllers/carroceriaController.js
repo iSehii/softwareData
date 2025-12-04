@@ -200,7 +200,8 @@ exports.crearCarroceria = (req, res) => {
                                     coordenadas: JSON.stringify(coordenadas || detalles || []),
                                     id_severidad: null,
                                     id_imagen_procesada: imagenAnalizadaGuardada._id.toString(),
-                                    id_usuario: id_usuario
+                                    id_usuario: id_usuario,
+                                    status: 'Completado'
                                 });
                                 id_imperfecciones = nuevaImperfeccion.id;
                                 console.log("Imperfección creada con ID:", id_imperfecciones);
@@ -407,6 +408,7 @@ exports.generarReporte = async (req, res) => {
                             imperfecciones: detalles || coordenadas || [],
                             contentType: "image/png"
                         });
+                        //asdasd
                         const imagenAnalizadaGuardada = await nuevaImagenAnalizada.save();
                         
                         // Crear imperfección con referencia a la imagen analizada
