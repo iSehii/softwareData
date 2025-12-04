@@ -199,7 +199,7 @@ exports.crearCarroceria = (req, res) => {
                                 const nuevaImperfeccion = await Imperfeccion.create({
                                     coordenadas: JSON.stringify(coordenadas || detalles || []),
                                     id_severidad: null,
-                                    id_imagen_procesada: s3_key,
+                                    id_imagen_procesada: imagenAnalizadaGuardada._id.toString(),
                                     id_usuario: id_usuario
                                 });
                                 id_imperfecciones = nuevaImperfeccion.id;
