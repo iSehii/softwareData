@@ -139,13 +139,13 @@ exports.crearCarroceria = (req, res) => {
                 panel,
                 descripcion,
                 folio: nuevoFolio,
-                id_imagen,
+                //id_imagen,
                 lote,
                 estado: estado == 1 || estado === true,
                 id_usuario
             });
 
-            if (id_imagen) {
+          //  if (id_imagen) {
                 console.log("Programando generación de reporte para la carrocería:", nuevaCarroceria.id);
 
                 // Crear el reporte en estado Pendiente antes del análisis
@@ -225,7 +225,7 @@ exports.crearCarroceria = (req, res) => {
                         console.warn("Advertencia: La carrocería se creó, pero falló la generación del reporte:", errorReporte.message);
                     }
                 });
-            }
+       //     }
 
             return res.status(201).json(nuevaCarroceria);
 
