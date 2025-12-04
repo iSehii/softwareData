@@ -93,23 +93,41 @@ const obtenerDatosPorId = async (req, res) => {
   }
 };
 
+const sharp = require("sharp");
+
 const obtenerImagenAnalizadaPorId = async (req, res) => {
   try {
     const imagen = await ImagenesAnalizadas.findById(req.params.id);
     if (!imagen) return res.status(404).json({ error: "Imagen no encontrada" });
 
     // Obtener imagen de S3
-    const { buffer, contentType } = await obtenerImagen("imagenes_analizadas/"+imagen.imagen_resultado_s3_key+".png");
-    const base64 = buffer.toString("base64");
-    const dataUri = `data:${contentType || imagen.contentType};base64,${base64}`;
+    const { buffer, contentType } = await obtenerImagen(
+      "imagenes_analizadas/" + imagen.imagen_resultado_s3_key + ".png"
+    );
+
+    // 🔥 REDUCCIÓN DE PESO Y REDIMENSIONADO
+    // - Resize máx 900px (ajusta según tu necesidad)
+    // - Comprime a JPEG 80%
+    const imagenReducida = await sharp(buffer)
+      .resize({ width: 900, withoutEnlargement: true }) 
+      .jpeg({ quality: 80 }) 
+      .toBuffer();
+
+    // Convertir a base64
+    const base64 = imagenReducida.toString("base64");
+    const dataUri = `data:image/jpeg;base64,${base64}`;
 
     res.json({
       _id: imagen._id,
-      contentType: contentType || imagen.contentType,
+      contentType: "image/jpeg",
       imagenBase64: dataUri,
       s3_key: imagen.imagen_resultado_s3_key,
+      size_original: buffer.length,
+      size_reducida: imagenReducida.length
     });
+
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: "Error al buscar la imagen" });
   }
 };
